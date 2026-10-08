@@ -1,25 +1,11 @@
-import {
-  ClerkProvider,
-  Show,
-  SignInButton,
-  SignUpButton,
-  UserButton,
-} from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
-import { Suspense } from "react";
+import { themeScript } from "@/lib/theme";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Cartograph",
@@ -30,43 +16,37 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      data-theme="system"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <ClerkProvider>
-          <header className="flex h-12 shrink-0 items-center justify-between gap-4 border-b border-zinc-200 bg-white px-4 font-sans text-sm dark:border-zinc-800 dark:bg-zinc-950">
-            <Link
-              href="/"
-              className="font-semibold focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600"
-            >
-              Cartograph
-            </Link>
-            <nav aria-label="Account" className="flex items-center gap-2">
-              <Suspense fallback={null}>
-                <Show when="signed-out">
-                  <SignInButton mode="modal">
-                    <button
-                      type="button"
-                      className="h-8 cursor-pointer rounded-sm px-3 hover:bg-zinc-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:hover:bg-zinc-800"
-                    >
-                      Sign in
-                    </button>
-                  </SignInButton>
-                  <SignUpButton mode="modal">
-                    <button
-                      type="button"
-                      className="h-8 cursor-pointer rounded-sm bg-blue-600 px-3 text-white hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-                    >
-                      Sign up
-                    </button>
-                  </SignUpButton>
-                </Show>
-                <Show when="signed-in">
-                  <UserButton />
-                </Show>
-              </Suspense>
-            </nav>
-          </header>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
+      <body>
+        <ClerkProvider
+          signInUrl="/sign-in"
+          signUpUrl="/sign-up"
+          signInForceRedirectUrl="/workspace"
+          signUpForceRedirectUrl="/workspace"
+          appearance={{
+            variables: {
+              colorPrimary: "var(--accent)",
+              colorPrimaryForeground: "var(--on-accent)",
+              colorBackground: "var(--surface)",
+              colorForeground: "var(--foreground)",
+              colorNeutral: "var(--foreground)",
+              colorMuted: "var(--background)",
+              colorMutedForeground: "var(--muted)",
+              colorInput: "var(--surface)",
+              colorInputForeground: "var(--foreground)",
+              colorBorder: "var(--border)",
+              fontFamily: "var(--font-geist-sans), sans-serif",
+              fontSize: "13px",
+              borderRadius: "3px",
+            },
+          }}
+        >
           {children}
         </ClerkProvider>
       </body>
