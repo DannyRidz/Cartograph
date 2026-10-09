@@ -74,3 +74,77 @@ Use `pnpm dev` to start the local application. The terminal checks are
 `pnpm typecheck`, `pnpm lint` and `pnpm build`.
 
 The browser acceptance check remains in `docs/specs/phase-01.md` for you to run.
+
+## Phase 02 database
+
+The first migration creates the eight data tables plus the agreed organizations
+parent. All nine have RLS and read policies using the Clerk version 2 `o.id`
+claim. Session clients have SELECT only. Grants are explicit so the schema also
+works when Supabase does not expose new tables automatically.
+
+Apply the tracked migration using the installed Supabase CLI, after linking
+this repository to the project matching `NEXT_PUBLIC_SUPABASE_URL`:
+
+```sh
+supabase db push
+```
+
+Alternatively, supply the project's Postgres connection string through a
+shell variable and use `supabase db push --db-url "$SUPABASE_DB_URL"`.
+Use the direct connection or session pooler, not the transaction pooler.
+The publishable API key cannot apply a database migration.
+
+For an agent to finish hosted setup, place `SUPABASE_DB_URL`,
+`SEED_ORGANIZATION_A`, and `SEED_ORGANIZATION_B` in `.env.local` as well.
+The last two are the actual Clerk organization IDs for the seed script:
+`SEED_ORGANIZATION_A` is Cartograph Demo and `SEED_ORGANIZATION_B` is RidzTalk.
+These are setup inputs, not values the dashboard reads. When running the commands
+yourself, export `SUPABASE_DB_URL` in the shell; psql does not load `.env.local`.
+
+Seed two actual Clerk organizations using their IDs from the workspace header.
+Run against the same Postgres database, as the database owner:
+
+```sh
+psql "$SUPABASE_DB_URL" -v organization_a=org_REPLACE_A -v organization_b=org_REPLACE_B -f supabase/seed.sql
+psql "$SUPABASE_DB_URL" -f supabase/verify.sql
+```
+
+The seed fails if either ID is missing, malformed, or identical. It creates two
+demonstration analyses for organization A (Cartograph Demo) and five for
+organization B (RidzTalk), marked Seeded in the UI, with different states.
+Rerunning replaces only seed analyses for those two teams. It creates no files,
+edges, routes, or AI output. New teams without seed rows see the empty state.
+
+The verification script checks all nine tables, policies, grants, tenant
+isolation, missing claims, cross team references, cascading deletion, and
+repeated deletion. Its temporary fixtures and deletes are rolled back. Run it
+with the database owner connection, never against a transaction pooler.
+
+## Clerk deletion webhook
+
+Create a Clerk webhook endpoint pointing to `/api/webhooks/clerk` on the public
+URL serving this application. Subscribe to `organization.deleted`. For local
+development, use a public forwarding URL to your running app.
+
+Add these server only values to `.env.local` and restart the app:
+
+```dotenv
+CLERK_WEBHOOK_SIGNING_SECRET=
+SUPABASE_SECRET_KEY=
+```
+
+Use the endpoint's signing secret from Clerk and the Supabase project's secret
+API key. The secret key is restricted in application code to the verified
+deletion handler. The migration grants its database role SELECT and DELETE on
+organizations only; database foreign keys cascade the deletion. Never prefix
+these variable names with `NEXT_PUBLIC_`.
+
+Invalid signatures return 400. Missing webhook configuration or failed database
+deletion returns 500 so Clerk can retry. Successful and repeated deletion returns
+204. Other verified event types are ignored. Creation is still seeded in this
+phase, and no runtime Clerk organization lookup is added.
+
+References: [Clerk webhook verification](https://clerk.com/docs/guides/development/webhooks/syncing),
+[Supabase explicit grants](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically).
+
+The phase 02 browser acceptance check is in `docs/specs/phase-02.md`.

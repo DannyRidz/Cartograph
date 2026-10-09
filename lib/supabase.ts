@@ -3,6 +3,7 @@ import "server-only";
 import { auth } from "@clerk/nextjs/server";
 import { createClient } from "@supabase/supabase-js";
 import { getEnvironment } from "@/lib/environment";
+import type { Database } from "@/lib/database.types";
 
 export async function createDatabaseClient() {
   const session = await auth.protect();
@@ -15,7 +16,7 @@ export async function createDatabaseClient() {
   const { supabaseUrl, supabasePublishableKey } = getEnvironment();
 
   // A fresh client belongs to this request, never a process-wide session.
-  return createClient(supabaseUrl, supabasePublishableKey, {
+  return createClient<Database>(supabaseUrl, supabasePublishableKey, {
     accessToken: async () => token,
     auth: {
       persistSession: false,

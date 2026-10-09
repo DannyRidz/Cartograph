@@ -1,0 +1,8 @@
+project_id = "Cartograph"
+
+[db]
+major_version = 17
+
+[db.seed]
+# Seeding requires two real Clerk organization IDs and runs explicitly with psql.
+enabled = false

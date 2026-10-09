@@ -87,6 +87,10 @@ You pick the file structure. These are about behaviour.
 - **No framework checks inside the parser.** That knowledge lives in an adapter.
 - **Graph calculations are pure functions** over a file list and an edge list.
 - **Database access happens in server code**, not inside components.
+- **Only the verified Clerk deletion webhook uses a secret database client.**
+  Dashboard reads always use the publishable key and the request's Clerk token.
+- **Database setup and terminal verification are in `docs/setup.md`.** Migrations
+  live in `supabase/migrations/`; seeds require two actual Clerk organization IDs.
 - **Who may read a row is decided by a policy**, never by application code. If a
   query needs a `where` clause to return the right rows, the policy is wrong.
 - **One place constructs the AI client.** Anywhere else silently skips tracing.
