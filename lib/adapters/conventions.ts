@@ -1,7 +1,9 @@
 import type { RepositoryFile } from "../parser/types.ts";
 
-// Adapter knowledge stays outside both parsing and graph arithmetic. These are
-// conventional entry points, not proof that the framework actually executes them.
+/**
+ * Returns conventional framework entry and config paths to exclude from unimported insights.
+ * These conventions are not proof of execution and stay outside parsing and graph arithmetic.
+ */
 export function conventionalEntryFiles(files: RepositoryFile[]): Set<string> {
   const source = "\\.(?:[cm]?[jt]s|[jt]sx)$";
   const appEntry = new RegExp(`(?:^|/)app/(?:.*/)?(?:page|route|layout|template|loading|error|global-error|not-found|default|forbidden|unauthorized|sitemap|robots|manifest|icon|apple-icon|opengraph-image|twitter-image)${source}`);

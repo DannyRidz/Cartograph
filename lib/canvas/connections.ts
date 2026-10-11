@@ -2,6 +2,11 @@ import type { RepositoryEdge } from "../parser/types.ts";
 import type { FoldedModule } from "./folding.ts";
 import { filePort, panelWindow } from "./window.ts";
 
+/**
+ * Groups parsed imports by visible canvas ports and returns selection-related active files.
+ * Category filters take precedence for edge dimming and require both endpoints to match.
+ * Throws when an import endpoint has no canvas file.
+ */
 export function canvasConnections(modules: FoldedModule[], edges: RepositoryEdge[], opened: Set<string>, selected: string | null, offsets: Map<string, number> = new Map(), categoryFiles: Set<string> | null = null) {
   const selectedFiles = selected === null ? null : new Set(modules.find((module) => module.id === selected)?.files.map((file) => file.path) ?? [selected]);
   const activeFiles = selectedFiles === null ? null : new Set(selectedFiles);

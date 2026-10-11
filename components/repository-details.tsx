@@ -21,6 +21,7 @@ interface DetailsProps {
   insights: ReturnType<typeof repositoryInsights>;
 }
 
+/** Shows repository, folder, or file details with two-level graph walks and shared insights. */
 export function RepositoryDetails({ name, repository, details, folder, selected, highlighted, select, hover, graph, insights }: DetailsProps) {
   const [tab, setTab] = useState<"structure" | "explanation">("structure");
   const [walk, setWalk] = useState<{ path: string; direction: Direction } | null>(null);

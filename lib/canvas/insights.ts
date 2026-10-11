@@ -8,6 +8,11 @@ export const insightSentences = {
   long: "This file has more than 500 lines.",
 } as const;
 
+/**
+ * Derives unimported files (excluding entry paths), cycles, and files over 500 lines.
+ * Popular files need at least 10 importers and exceed the mean plus two population
+ * standard deviations, calculated across all parsed files including zero-importer files.
+ */
 export function repositoryInsights(files: RepositoryFile[], graph: GraphIndex, entryFiles: Set<string>) {
   const counts = files.map((file) => graph.incoming.get(file.path)?.size ?? 0);
   const mean = counts.reduce((sum, count) => sum + count, 0) / Math.max(1, counts.length);

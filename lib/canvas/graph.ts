@@ -2,6 +2,7 @@ import type { RepositoryEdge, RepositoryFile } from "../parser/types.ts";
 
 export type Direction = "incoming" | "outgoing";
 
+/** Builds distinct importer and dependency sets for every file; throws for missing endpoints. */
 export function indexGraph(files: RepositoryFile[], edges: RepositoryEdge[]) {
   const incoming = new Map(files.map((file) => [file.path, new Set<string>()]));
   const outgoing = new Map(files.map((file) => [file.path, new Set<string>()]));
@@ -17,7 +18,11 @@ export function indexGraph(files: RepositoryFile[], edges: RepositoryEdge[]) {
 
 export type GraphIndex = ReturnType<typeof indexGraph>;
 
-// Breadth first traversal gives the shortest import distance, even inside cycles.
+/**
+ * Returns reachable files, excluding the start, sorted by shortest import distance then path.
+ * Walks incoming importers or outgoing dependencies up to the depth limit (default two).
+ * Throws for an unknown start or a depth that is not a nonnegative safe integer.
+ */
 export function walkGraph(graph: GraphIndex, start: string, direction: Direction, depth = 2) {
   if (!Number.isSafeInteger(depth) || depth < 0) throw new Error("Depth must be a nonnegative integer");
   const neighbours = graph[direction];
@@ -36,8 +41,10 @@ export function walkGraph(graph: GraphIndex, start: string, direction: Direction
   return queue.slice(1).sort((a, b) => a.depth - b.depth || a.path.localeCompare(b.path));
 }
 
-// Two iterative passes find strongly connected components without a call stack.
-// Each cyclic component includes one real, closed import path for spot checking.
+/**
+ * Finds cyclic strongly connected components in two iterative passes to avoid stack overflow.
+ * Returns each group's sorted files and one real closed import path, including self-imports.
+ */
 export function importCycles(graph: GraphIndex) {
   const outgoing = new Map([...graph.outgoing].map(([path, next]) => [path, [...next].sort()]));
   const visited = new Set<string>();

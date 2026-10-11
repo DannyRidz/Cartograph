@@ -34,6 +34,7 @@ function Ports({ id }: { id: string }) {
   return <><Handle id={`${id}:in`} type="target" position={Position.Left} isConnectable={false} /><Handle id={`${id}:out`} type="source" position={Position.Right} isConnectable={false} /></>;
 }
 
+/** Renders a folder panel, keeping category nonmatches dimmed even when highlighted. */
 function ModulePanel({ data }: NodeProps<ModuleNode>) {
   const { module, opened, labels } = data;
   const window = panelWindow(module.files.length, data.offset);
@@ -101,6 +102,7 @@ function Refit({ revision }: { revision: string }) {
   return null;
 }
 
+/** Coordinates the dependency map, category filters, selection, and local graph insights. */
 function Canvas({ repository, name }: { repository: RepositoryResult; name: string }) {
   const folded = useMemo(() => foldRepository(repository.files, repository.edges), [repository]);
   const [opened, setOpened] = useState<Set<string>>(new Set());

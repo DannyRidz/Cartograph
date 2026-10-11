@@ -8,6 +8,7 @@ interface InsightsProps {
   hover: (path: string | null) => void;
 }
 
+/** Renders initially collapsed graph facts with paths that select and highlight canvas files. */
 export function RepositoryInsights({ insights, select, hover }: InsightsProps) {
   const pathButton = (path: string, count?: number) => <button className="detail-path" onClick={() => select(path)} onMouseEnter={() => hover(path)} onMouseLeave={() => hover(null)} onFocus={() => hover(path)} onBlur={() => hover(null)}>
     <code>{path}</code>{count !== undefined && <span>{count}</span>}
