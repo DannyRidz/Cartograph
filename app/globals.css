@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@xyflow/react/dist/style.css";
 
 :root {
   color-scheme: light;
@@ -147,6 +148,55 @@ select, input { border: 1px solid var(--border); border-radius: 3px; background:
 .auth-page { min-height: 100dvh; display: flex; flex-direction: column; }
 .auth-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--surface); }
 .auth-content { display: flex; flex: 1; align-items: center; justify-content: center; padding: 24px 12px; }
+
+/* Keep the detail pane beside the map, even when the viewport needs to scroll. */
+.canvas-preview { display: flex; min-height: 100dvh; flex-direction: column; overflow-x: auto; }
+.canvas-title { margin: 0; }
+.preview-source { margin-left: auto; color: var(--muted); font-size: 11px; }
+.canvas-shell {
+  display: grid;
+  grid-template-columns: 180px minmax(320px, 1fr) 300px;
+  flex: 1;
+  min-width: 800px;
+}
+.canvas-rail { background: var(--surface); border-right: 1px solid var(--border); }
+.canvas-map { display: flex; min-width: 0; flex-direction: column; background: var(--background); }
+.canvas-details { background: var(--surface); border-left: 1px solid var(--border); }
+.canvas-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; padding: 6px 12px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; }
+.canvas-toolbar button { margin-left: auto; padding: 2px 6px; border: 1px solid var(--border); background: var(--surface); color: var(--foreground); }
+.canvas-toolbar button:disabled { cursor: default; }
+.canvas-flow { position: relative; flex: 1; min-height: 600px; }
+.canvas-flow > .react-flow { position: absolute; inset: 0; }
+.canvas-flow .react-flow { --xy-background-color: var(--background); --xy-controls-button-background-color: var(--surface); --xy-controls-button-background-color-hover: var(--hover); --xy-controls-button-color: var(--foreground); --xy-controls-button-border-color: var(--border); --xy-edge-stroke-width: 1; }
+.canvas-flow .react-flow__controls { box-shadow: none; border: 1px solid var(--border); }
+.canvas-flow .react-flow__handle { width: 4px; height: 4px; min-width: 4px; min-height: 4px; border: 0; background: var(--muted); }
+.module-panel { position: relative; width: 100%; height: 100%; border: 1px solid var(--border); background: var(--surface); color: var(--foreground); font-size: 11px; }
+.module-panel.is-selected { border-color: var(--accent); }
+.module-header { display: flex; width: 100%; height: 100%; flex-direction: column; justify-content: center; align-items: flex-start; gap: 3px; padding: 8px 12px; border: 0; text-align: left; background: transparent; color: var(--foreground); }
+.module-header:hover, .module-row button:hover { background: var(--hover); }
+.module-header code { white-space: nowrap; font-size: 12px; font-weight: 600; }
+.module-header > span { color: var(--muted); }
+.module-fans { display: flex; gap: 12px; font-variant-numeric: tabular-nums; }
+.fan-in, .row-fan-in { color: var(--incoming); }
+.fan-out { color: var(--outgoing); }
+.is-open .module-header { height: 62px; border-bottom: 1px solid var(--border); }
+.module-row { position: relative; height: 28px; }
+.module-row button { display: flex; align-items: center; gap: 8px; width: 100%; height: 100%; padding: 0 12px; border: 0; color: var(--foreground); background: transparent; text-align: left; }
+.module-row button[aria-pressed="true"] { background: var(--hover); outline: 1px solid var(--accent); outline-offset: -1px; }
+.module-row code { white-space: nowrap; }
+.row-fan-in { margin-left: auto; font-variant-numeric: tabular-nums; }
+.is-dimmed { opacity: .18; }
+.module-summary { position: relative; height: 28px; padding: 5px 12px; border-top: 1px solid var(--border); color: var(--muted); }
+/* The row list scrolls inside the panel; ports stay outside its clipped content. */
+.module-list-region { position: relative; }
+.module-scroll { height: 100%; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-gutter: stable; }
+.module-row-port { position: absolute; left: 0; right: 0; height: 0; pointer-events: none; }
+.file-swatch { display: inline-block; flex: 0 0 6px; width: 6px; height: 6px; background: var(--muted); }
+.file-swatch.module { background: var(--accent); }
+.file-categories { margin: 0; padding: 12px 16px; list-style: none; }
+.file-categories li { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; }
+.file-categories li > span:last-child { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.canvas-coverage { margin: 0; padding: 12px 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 11px; }
 
 @media (max-width: 1100px) {
   .workspace-panels { grid-template-columns: 180px minmax(0, 1fr) 240px; }
