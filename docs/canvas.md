@@ -25,6 +25,23 @@ existence, row handles for every folder expansion, input order independence,
 deterministic layout, selection neighbours and heights derived from fan in.
 Browser acceptance remains manual.
 
+The detail pane rests on the repository summary. Import totals count all import
+outcomes recorded by the parser. Neighbour lists count distinct resolved files,
+so repeated imports and multiple import kinds never duplicate a path. Files with
+no dependents are ranked by their dependency count, then path. All ranked lists
+remain complete and scroll within the pane.
+
+For phase 05, the fallback adapter displays framework as not detected and routes
+as not available. All parsed files count as unidentified by convention, while
+their structural module or script kind remains visible. Framework and route
+detection are outside this phase, as agreed before the build.
+
+Selecting a detail path opens its owning folder and scrolls the map's file list
+to it. Hover highlights a file row, its folded folder, or its above or below
+summary point. Folder hover highlights its member paths in the detail pane.
+The Structure or Explanation tab stays open across selection changes, including
+clearing selection. Selection and hover use only the parser result in memory.
+
 Folding starts at two files and retries from the original file list with a
 higher threshold only when needed. Each depth's merge decisions read one
 snapshot. Folder fan in counts distinct files outside the folder importing

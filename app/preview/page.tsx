@@ -15,7 +15,7 @@ export default function PreviewPage() {
         <span className="muted">Canvas preview</span>
         <a className="preview-source" href={`${previewSource.url}/tree/${previewSource.commit}/${previewSource.directory}`}><code>reduxjs/redux-toolkit · {previewSource.directory}</code></a>
       </header>
-      <DependencyCanvas repository={previewRepository} />
+      <DependencyCanvas repository={previewRepository} name="reduxjs/redux-toolkit" />
     </div>
   );
 }

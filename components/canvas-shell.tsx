@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export function CanvasShell({ children, rail }: { children?: ReactNode; rail?: ReactNode }) {
+export function CanvasShell({ children, rail, details }: { children?: ReactNode; rail?: ReactNode; details?: ReactNode }) {
   return (
     <div className="canvas-shell">
       <aside className="canvas-rail" aria-labelledby="categories-heading">
@@ -9,7 +9,7 @@ export function CanvasShell({ children, rail }: { children?: ReactNode; rail?: R
       <main id="canvas" className="canvas-map" aria-label="Dependency map" tabIndex={-1}>
         {children}
       </main>
-      <aside className="canvas-details" aria-label="File details" />
+      <aside className="canvas-details" aria-label="Repository details">{details}</aside>
     </div>
   );
 }
