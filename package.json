@@ -13,7 +13,8 @@
     "lint": "eslint",
     "parse": "node --experimental-strip-types scripts/parse-repository.ts",
     "verify:parser": "node --experimental-strip-types scripts/verify-parser.ts",
-    "verify:canvas": "node --experimental-strip-types scripts/verify-canvas.ts lib/fixtures/redux-toolkit.json"
+    "verify:canvas": "node --experimental-strip-types scripts/verify-canvas.ts lib/fixtures/redux-toolkit.json",
+    "verify:phase-06": "node --experimental-strip-types scripts/verify-phase-06.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.12",

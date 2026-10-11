@@ -4,6 +4,9 @@ import { useState } from "react";
 import type { RepositoryResult } from "@/lib/parser/types";
 import type { FoldedModule } from "@/lib/canvas/folding";
 import type { repositoryDetails } from "@/lib/canvas/details";
+import { walkGraph, type GraphIndex, type Direction } from "@/lib/canvas/graph";
+import type { repositoryInsights } from "@/lib/canvas/insights";
+import { RepositoryInsights } from "@/components/repository-insights";
 
 interface DetailsProps {
   name: string;
@@ -14,11 +17,15 @@ interface DetailsProps {
   highlighted: Set<string>;
   select: (path: string) => void;
   hover: (path: string | null) => void;
+  graph: GraphIndex;
+  insights: ReturnType<typeof repositoryInsights>;
 }
 
-export function RepositoryDetails({ name, repository, details, folder, selected, highlighted, select, hover }: DetailsProps) {
+export function RepositoryDetails({ name, repository, details, folder, selected, highlighted, select, hover, graph, insights }: DetailsProps) {
   const [tab, setTab] = useState<"structure" | "explanation">("structure");
+  const [walk, setWalk] = useState<{ path: string; direction: Direction } | null>(null);
   const file = selected === null ? undefined : details.files.get(selected);
+  const traversal = file && walk?.path === selected ? walkGraph(graph, file.file.path, walk.direction) : null;
   const pathButton = (path: string, count?: number) => <button className={`detail-path${highlighted.has(path) ? " is-highlighted" : ""}`} onClick={() => select(path)} onMouseEnter={() => hover(path)} onMouseLeave={() => hover(null)} onFocus={() => hover(path)} onBlur={() => hover(null)}>
     <code>{path}</code>{count !== undefined && <span>{count}</span>}
   </button>;
@@ -42,6 +49,14 @@ export function RepositoryDetails({ name, repository, details, folder, selected,
         {pathButton(file.file.path)}
         <dl className="detail-facts"><dt>Kind</dt><dd>{file.file.kind}</dd><dt>Lines</dt><dd>{file.file.lineCount}</dd><dt>Dependencies</dt><dd>{file.imports.length}</dd><dt>Dependents</dt><dd>{file.dependents.length}</dd></dl>
         {paths("Depends on", file.imports)}{paths("Depended on by", file.dependents)}
+        <section className="detail-section"><div className="graph-actions">
+          <button aria-pressed={traversal !== null && walk?.direction === "incoming"} onClick={() => setWalk({ path: file.file.path, direction: "incoming" })}>Blast radius</button>
+          <button aria-pressed={traversal !== null && walk?.direction === "outgoing"} onClick={() => setWalk({ path: file.file.path, direction: "outgoing" })}>Dependency chain</button>
+        </div><p className="detail-note">Up to two import levels. The number beside each path is its shortest import distance.</p>
+          {traversal !== null && <><h3>{walk?.direction === "incoming" ? "Blast radius" : "Dependency chain"} <span>{traversal.length}</span></h3>
+            {traversal.length ? <ul className="detail-paths">{traversal.map(({ path, depth }) => <li key={path}>{pathButton(path, depth)}</li>)}</ul> : <p className="detail-note">None within two import levels.</p>}
+          </>}
+        </section>
       </> : folder ? <>
         <p className="detail-folder"><code>{folder.id}</code></p>
         <dl className="detail-facts"><dt>Files</dt><dd>{folder.files.length}</dd>{kinds.map(({ kind, count }) => <div className="detail-fact" key={kind}><dt>{kind === "module" ? "Modules" : "Scripts"}</dt><dd>{count}</dd></div>)}</dl>
@@ -54,5 +69,6 @@ export function RepositoryDetails({ name, repository, details, folder, selected,
         <section className="detail-section"><h3>Where to start reading <span>{details.entryFiles.length}</span></h3><p className="detail-note">Nothing imports these files. Ranked by dependency count.</p>{details.entryFiles.length ? <ol className="detail-paths">{details.entryFiles.map((item) => <li key={item.file.path}>{pathButton(item.file.path, item.imports.length)}</li>)}</ol> : <p className="detail-note">Every file has dependents.</p>}</section>
       </>}
     </div>
+    {tab === "structure" && <RepositoryInsights insights={insights} select={select} hover={hover} />}
   </div>;
 }
