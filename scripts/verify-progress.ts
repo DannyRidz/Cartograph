@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { isProgressMessage, isStale, mergeProgress, progressSnapshot, staleAfterMs, type ProgressSnapshot } from "../lib/analysis-progress.ts";
+import { createProgressClient } from "../lib/supabase-progress.ts";
+import { isProgressMessage, receivedProgress, isStale, mergeProgress, progressSnapshot, staleAfterMs, type ProgressSnapshot } from "../lib/analysis-progress.ts";
 
 const start: ProgressSnapshot = { id: "verification", stage: "fetch", message: "Fetching.", updatedAt: "2026-10-19T00:00:00.000Z" };
 const now = Date.parse(start.updatedAt);
@@ -24,3 +25,32 @@ assert.equal(failed.stage, "failed");
 assert.equal(progressSnapshot({ id: "seed", state: "completed", stage: "queued", stage_message: "Waiting.",
   failed_stage: null, failure_message: null, updated_at: start.updatedAt, is_seed: true }).stage, "completed");
 console.log("Progress verified: payload validation, stale timing, terminal states, failure details and protection against late stage regressions.");
+
+const transportPayload = { id: "transport-message-id", stage: "parse", message: "Parsing imports.", updatedAt: "untrusted timestamp" };
+const received = receivedProgress("actual-analysis-id", transportPayload, start.updatedAt);
+assert.deepEqual(received, { id: "actual-analysis-id", stage: "parse", message: "Parsing imports.", updatedAt: start.updatedAt });
+assert.equal(receivedProgress("actual-analysis-id", { stage: "unknown", message: "Invalid" }, start.updatedAt), null);
+console.log("Transport metadata cannot overwrite the analysis ID or receipt timestamp.");
+
+const originalUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const originalKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+process.env.NEXT_PUBLIC_SUPABASE_URL = "https://progress-verification.invalid";
+process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = "verification-key";
+try {
+  const tokenRequests: { skipCache: true }[] = [];
+  const client = createProgressClient(async (options) => {
+    tokenRequests.push(options);
+    return `verification-token-${tokenRequests.length}`;
+  });
+  await client.realtime.setAuth();
+  await client.realtime.setAuth();
+  assert(tokenRequests.length >= 2);
+  assert(tokenRequests.every((options) => options.skipCache === true));
+  await client.removeAllChannels();
+  console.log("Realtime authentication always requests a fresh Clerk token.");
+} finally {
+  if (originalUrl === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+  else process.env.NEXT_PUBLIC_SUPABASE_URL = originalUrl;
+  if (originalKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  else process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = originalKey;
+}

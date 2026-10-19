@@ -149,9 +149,14 @@ References: [Clerk webhook verification](https://clerk.com/docs/guides/developme
 
 The phase 02 browser acceptance check is in `docs/specs/phase-02.md`.
 
+If the connection reports `tenant/user not found`, check the project's status
+in the Supabase dashboard before changing credentials. A paused project can
+produce that error. Resume it and wait until it is healthy, then test the
+existing connection again.
+
 ## Phase 07 pipeline and progress
 
-Apply both phase 07 migrations with `supabase db push`, using the database
+Apply all phase 07 migrations with `supabase db push`, using the database
 connection described above. They add the parser storage, session write policies,
 private progress topic policies and the publishing trigger. No secret client is
 used for analysis runs.
@@ -198,18 +203,29 @@ empty `analysis_created` notification so other dashboard tabs can load the new
 row. That topic also requires the matching Clerk organization. Clients receive
 only; no broadcast INSERT policy is added.
 
+The hosted `realtime.send` function runs with its caller's permissions. A follow
+up migration moves the publisher into `cartograph_internal` and makes only that
+trigger a security definer. It verifies the row's Clerk organization claim,
+uses an empty search path and grants no direct execution to session clients.
+The trigger supplies only the stage and message; Supabase adds its own transport
+message ID. Clients still have no broadcast INSERT policy.
+
 The browser client uses Clerk's `getToken` as Supabase's `accessToken` provider,
-with private channels and the publishable key. It opens authenticated sockets
+with private channels and the publishable key. Token requests bypass Clerk's
+cache so socket heartbeats receive a fresh token. It opens authenticated sockets
 without storing a separate token. Server code continues to handle all database
 reads. One server snapshot after joining or rejoining closes the gap between
 the initial read and the subscription. Later stage updates come from the socket.
-Connection and synchronization failures appear on screen. Late messages cannot
-move a completed run back to an earlier stage.
+Connection and synchronization failures appear on screen with the service's
+error message when available. Closed or failed channels are recreated with
+backoff; their timers and sockets are cleaned up when leaving the page. Late messages cannot
+move a completed run back to an earlier stage. Supabase transport metadata never
+replaces the analysis ID attached to its channel.
 
 In the Supabase dashboard, keep Realtime enabled and disable **Allow public
 access** in Realtime settings. A connected client provisions the day's managed
 broadcast partition, so open the signed in dashboard before testing database
-broadcasts. Neither migration changes the Realtime service's own machinery.
+broadcasts. No migration changes the Realtime service's own machinery.
 
 The progress page currently ends with the completed state and stored file
 counts. Explorer wiring, the coverage banner and removal of the preview fixture

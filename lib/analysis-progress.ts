@@ -14,6 +14,13 @@ export function isProgressMessage(value: unknown): value is ProgressMessage {
     && Object.hasOwn(stageLabels, value.stage) && "message" in value && typeof value.message === "string";
 }
 
+// The channel identifies the analysis. Transport metadata, including Supabase's
+// own message id, must never replace that identity.
+export function receivedProgress(id: string, payload: unknown, receivedAt: string): ProgressSnapshot | null {
+  if (!isProgressMessage(payload)) return null;
+  return { id, stage: payload.stage, message: payload.message, updatedAt: receivedAt };
+}
+
 export function progressSnapshot(row: { id: string; stage: AnalysisStage; state: AnalysisState; stage_message: string;
   failed_stage: PipelineStage | null; failure_message: string | null; updated_at: string; is_seed: boolean }): ProgressSnapshot {
   const stage = row.is_seed ? row.state === "parsing" ? "parse" : row.state : row.stage;
