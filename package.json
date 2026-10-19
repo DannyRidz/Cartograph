@@ -12,6 +12,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint",
     "parse": "node --experimental-strip-types scripts/parse-repository.ts",
+    "verify:progress": "node --experimental-strip-types scripts/verify-progress.ts",
+    "verify:pipeline": "node --experimental-strip-types scripts/verify-pipeline.ts",
     "verify:parser": "node --experimental-strip-types scripts/verify-parser.ts",
     "verify:canvas": "node --experimental-strip-types scripts/verify-canvas.ts lib/fixtures/redux-toolkit.json",
     "verify:phase-06": "node --experimental-strip-types scripts/verify-phase-06.ts"
