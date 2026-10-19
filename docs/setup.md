@@ -261,3 +261,10 @@ rollback, exact data and tenant isolation. The progress SQL checks private topic
 policies, exact trigger payloads, failed stage messages and rejection of client
 broadcasts. Their temporary organizations and messages are rolled back. These
 SQL checks do not replace testing the hosted socket with a real Clerk session.
+
+Completed analyses open the explorer at their existing analysis URL. The server
+loads stored files and edges with the request's Clerk token, using RLS and
+bounded pages, then validates them against the saved parser coverage. Live
+completion refreshes this route once to replace the pipeline with its map.
+`pnpm verify:stored-map` checks the parser round trip across pages, all three
+import kinds, partial coverage and rejection of incomplete or inaccessible data.

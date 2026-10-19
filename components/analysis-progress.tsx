@@ -20,7 +20,7 @@ export function AnalysisProgress({ initial, organizationId, repository, commit, 
     return () => clearInterval(timer);
   }, []);
   useEffect(() => {
-    // Fetch completion metadata once, after its transaction has committed.
+    // The completed server render replaces this pipeline with its stored map.
     if ((current.stage === "completed" || current.stage === "failed") && current.stage !== initial.stage) router.refresh();
   }, [current.stage, initial.stage, router]);
   const stale = isStale(current, now);

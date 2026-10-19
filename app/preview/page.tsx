@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 export default function PreviewPage() {
   return (
     <div className="canvas-preview">
-      <a className="skip-link" href="#canvas">Skip to map</a>
+      <a className="skip-link" href="#workspace">Skip to map</a>
       <header className="app-header">
         <h1 className="brand canvas-title">Cartograph</h1>
         <span className="muted">Canvas preview</span>

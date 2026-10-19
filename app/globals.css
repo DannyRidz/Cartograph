@@ -159,6 +159,14 @@ select, input { border: 1px solid var(--border); border-radius: 3px; background:
   flex: 1;
   min-width: 800px;
 }
+.analysis-map { display: flex; flex: 1; min-width: 0; flex-direction: column; overflow-x: auto; }
+.analysis-map-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.analysis-map-heading h1 { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.analysis-map-heading > .muted { margin-left: auto; }
+.coverage-banner { padding: 8px 16px; border-bottom: 1px solid var(--border); background: var(--surface); font-size: 11px; }
+.coverage-banner summary { line-height: 1.7; }
+.coverage-banner p { margin: 8px 0 0; color: var(--muted); }
+.coverage-banner ul { max-height: 160px; overflow-y: auto; margin: 8px 0 0; padding-left: 20px; }
 .canvas-rail { background: var(--surface); border-right: 1px solid var(--border); }
 .canvas-map { display: flex; min-width: 0; flex-direction: column; background: var(--background); }
 .canvas-details { background: var(--surface); border-left: 1px solid var(--border); }

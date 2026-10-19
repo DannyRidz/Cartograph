@@ -3,6 +3,7 @@ import { getDashboardSnapshot } from "@/lib/analyses";
 import { requireOrganization } from "@/lib/organization";
 import { AnalysisForm } from "@/components/analysis-form";
 import { AnalysisHistory } from "@/components/analysis-history";
+import { WorkspacePanels } from "@/components/workspace-panels";
 
 async function Analyses() {
   const organization = await requireOrganization();
@@ -12,9 +13,9 @@ async function Analyses() {
 }
 
 export default function WorkspacePage() {
-  return <>
+  return <WorkspacePanels>
     <header className="dashboard-heading"><h1>Analyses</h1><p>Repository analysis history for the active team.</p></header>
     <AnalysisForm />
     <Suspense fallback={<p className="empty-state" role="status">Loading analyses…</p>}><Analyses /></Suspense>
-  </>;
+  </WorkspacePanels>;
 }
