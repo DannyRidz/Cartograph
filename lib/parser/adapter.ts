@@ -1,4 +1,5 @@
-import type { RepositoryFile } from "./types.ts";
+import type { SourceFile } from "ts-morph";
+import type { RepositoryFile, RepositoryRoute } from "./types.ts";
 
 export interface AdapterFile {
   path: string;
@@ -8,6 +9,7 @@ export interface AdapterFile {
 
 export interface RepositoryAdapter {
   name: string;
+  inspect?(file: AdapterFile, source: SourceFile, sources: SourceFile[]): { role: string; routes: RepositoryRoute[] };
   classify(file: AdapterFile): Pick<RepositoryFile, "module" | "kind">;
 }
 

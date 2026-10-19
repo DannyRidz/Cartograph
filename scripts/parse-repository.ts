@@ -1,3 +1,4 @@
+import { detectRepositoryAdapter } from "../lib/adapters/detect.ts";
 import { parseRepository } from "../lib/parser/parse.ts";
 import { readRepositoryResult, writeRepositoryResult } from "../lib/parser/data.ts";
 
@@ -6,7 +7,8 @@ async function main(): Promise<void> {
   if (!directory || (flag !== undefined && (flag !== "--output" || !output)) || extra.length) {
     throw new Error("Usage: pnpm parse <directory> [--output <result.json>]");
   }
-  const result = await parseRepository(directory);
+  const result = await parseRepository(directory, await detectRepositoryAdapter(directory));
+  console.log(`Framework: ${result.adapter}, routes: ${result.routes?.length ?? 0}`);
   const coverage = result.coverage;
   console.log(`Files found: ${coverage.filesFound}, parsed: ${coverage.filesParsed}, skipped: ${coverage.filesSkipped}`);
   console.log(`Folders: ${coverage.folders}, edges: ${result.edges.length}`);

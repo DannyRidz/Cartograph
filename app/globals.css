@@ -281,3 +281,18 @@ select, input { border: 1px solid var(--border); border-radius: 3px; background:
 .progress-notice { margin: 16px 24px; padding: 10px 12px; border: 1px solid var(--muted); background: var(--surface); font-size: 12px; }
 .analysis-progress .progress-notice { margin: 12px 0; }
 .progress-stages li[data-state="failed"] { color: var(--foreground); font-weight: 650; border-left: 2px solid var(--muted); padding-left: 8px; }
+
+/* Keep route identifiers intact in the map's wider column. */
+.canvas-flow-with-routes { min-height: 360px; }
+.route-section { flex-shrink: 0; min-width: 0; padding: 12px; border-top: 1px solid var(--border); background: var(--surface); }
+.route-section h2 { display: flex; align-items: baseline; gap: 8px; margin: 0 0 8px; font-size: 12px; }
+.route-section h2 span { color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 400; }
+.route-scroll { max-height: 200px; overflow: auto; scrollbar-width: thin; }
+.route-table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: left; }
+.route-table th, .route-table td { padding: 6px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.route-table th { position: sticky; top: 0; z-index: 1; background: var(--surface); color: var(--muted); font-weight: 500; }
+.route-table th:first-child, .route-table td:first-child { width: 72px; padding-left: 0; }
+.route-table th:last-child, .route-table td:last-child { padding-right: 0; }
+.route-table code { white-space: nowrap; overflow-wrap: normal; }
+.route-table .detail-path { width: 100%; padding: 3px 4px; }
+.route-table .detail-path[aria-pressed="true"] { background: var(--hover); box-shadow: inset 2px 0 var(--accent); }

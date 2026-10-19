@@ -15,6 +15,7 @@
     "verify:progress": "node --experimental-strip-types scripts/verify-progress.ts",
     "verify:stored-map": "node --experimental-strip-types scripts/verify-stored-map.ts",
     "verify:pipeline": "node --experimental-strip-types scripts/verify-pipeline.ts",
+    "verify:adapters": "node --experimental-strip-types scripts/verify-adapters.ts",
     "verify:parser": "node --experimental-strip-types scripts/verify-parser.ts",
     "verify:canvas": "node --experimental-strip-types scripts/verify-canvas.ts lib/fixtures/redux-toolkit.json",
     "verify:phase-06": "node --experimental-strip-types scripts/verify-phase-06.ts"

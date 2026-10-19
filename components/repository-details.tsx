@@ -6,6 +6,7 @@ import type { FoldedModule } from "@/lib/canvas/folding";
 import type { repositoryDetails } from "@/lib/canvas/details";
 import { walkGraph, type GraphIndex, type Direction } from "@/lib/canvas/graph";
 import type { repositoryInsights } from "@/lib/canvas/insights";
+import { taxonomy } from "@/lib/adapters/taxonomy";
 import { RepositoryInsights } from "@/components/repository-insights";
 
 interface DetailsProps {
@@ -23,6 +24,8 @@ interface DetailsProps {
 
 /** Shows repository, folder, or file details with two-level graph walks and shared insights. */
 export function RepositoryDetails({ name, repository, details, folder, selected, highlighted, select, hover, graph, insights }: DetailsProps) {
+  const framework = taxonomy(repository.adapter);
+  const routes = repository.routes ?? [];
   const [tab, setTab] = useState<"structure" | "explanation">("structure");
   const [walk, setWalk] = useState<{ path: string; direction: Direction } | null>(null);
   const file = selected === null ? undefined : details.files.get(selected);
@@ -48,7 +51,7 @@ export function RepositoryDetails({ name, repository, details, folder, selected,
     <div className="detail-content" id={`detail-panel-${tab}`} role="tabpanel" aria-labelledby={`detail-tab-${tab}`} tabIndex={0}>
       {tab === "explanation" ? <p className="detail-note">No explanation yet. Explanations will appear here when model calls are available.</p> : file ? <>
         {pathButton(file.file.path)}
-        <dl className="detail-facts"><dt>Kind</dt><dd>{file.file.kind}</dd><dt>Lines</dt><dd>{file.file.lineCount}</dd><dt>Dependencies</dt><dd>{file.imports.length}</dd><dt>Dependents</dt><dd>{file.dependents.length}</dd></dl>
+        <dl className="detail-facts"><dt>Role</dt><dd>{framework.categories.find((category) => category.role === (file.file.role ?? file.file.kind))?.label ?? file.file.kind}</dd><dt>Lines</dt><dd>{file.file.lineCount}</dd><dt>Dependencies</dt><dd>{file.imports.length}</dd><dt>Dependents</dt><dd>{file.dependents.length}</dd></dl>
         {paths("Depends on", file.imports)}{paths("Depended on by", file.dependents)}
         <section className="detail-section"><div className="graph-actions">
           <button aria-pressed={traversal !== null && walk?.direction === "incoming"} onClick={() => setWalk({ path: file.file.path, direction: "incoming" })}>Blast radius</button>
@@ -64,8 +67,8 @@ export function RepositoryDetails({ name, repository, details, folder, selected,
         {paths("Files in folder", folder.files.map((member) => member.path))}
       </> : <>
         <p className="detail-name">{name}</p>
-        <dl className="detail-facts"><dt>Framework</dt><dd>Not detected</dd><dt>Files</dt><dd>{repository.files.length}</dd><dt>Imports seen</dt><dd>{repository.coverage.imports.length}</dd><dt>Routes</dt><dd>Not available</dd><dt>Unidentified by convention</dt><dd>{repository.files.length}</dd></dl>
-        <p className="detail-note">The fallback adapter identifies modules and scripts. It has no framework, route, or file convention detection.</p>
+        <dl className="detail-facts"><dt>Framework</dt><dd>{framework.name}</dd><dt>Files</dt><dd>{repository.files.length}</dd><dt>Imports seen</dt><dd>{repository.coverage.imports.length}</dd><dt>Routes</dt><dd>{routes.length}</dd><dt>Unidentified by convention</dt><dd>{repository.files.filter((file) => framework.genericRoles.includes(file.role ?? file.kind)).length}</dd></dl>
+        <p className="detail-note">Roles come from framework conventions. Routes appear only when their method and full pattern are recoverable.</p>
         <section className="detail-section"><h3>Most depended on <span>{details.mostImported.length}</span></h3><p className="detail-note">Ranked by distinct importing files.</p>{details.mostImported.length ? <ol className="detail-paths">{details.mostImported.map((item) => <li key={item.file.path}>{pathButton(item.file.path, item.dependents.length)}</li>)}</ol> : <p className="detail-note">No files have dependents.</p>}</section>
         <section className="detail-section"><h3>Where to start reading <span>{details.entryFiles.length}</span></h3><p className="detail-note">Nothing imports these files. Ranked by dependency count.</p>{details.entryFiles.length ? <ol className="detail-paths">{details.entryFiles.map((item) => <li key={item.file.path}>{pathButton(item.file.path, item.imports.length)}</li>)}</ol> : <p className="detail-note">Every file has dependents.</p>}</section>
       </>}

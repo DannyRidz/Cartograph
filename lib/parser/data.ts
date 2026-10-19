@@ -15,6 +15,7 @@ function kind(value: unknown): value is ImportKind {
 function file(value: unknown): value is RepositoryFile {
   return object(value) && typeof value.path === "string" && typeof value.folder === "string"
     && typeof value.module === "string" && (value.kind === "module" || value.kind === "script")
+    && (value.role === undefined || (typeof value.role === "string" && value.role.length > 0))
     && count(value.lineCount) && typeof value.hash === "string" && /^[a-f0-9]{64}$/.test(value.hash)
     && count(value.fanIn) && count(value.fanOut);
 }
@@ -45,8 +46,14 @@ function result(value: unknown): value is RepositoryResult {
 
 export function validateRepositoryResult(value: unknown): asserts value is RepositoryResult {
   if (!result(value)) throw new Error("Invalid repository data or unsupported schema version");
+  if (value.routes !== undefined && (!Array.isArray(value.routes) || !value.routes.every((route: unknown) =>
+    object(route) && typeof route.file === "string" && typeof route.path === "string" && route.path.startsWith("/")
+    && typeof route.method === "string" && ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "CONNECT", "TRACE"].includes(route.method))))
+    throw new Error("Invalid repository routes");
   const coverage = value.coverage;
   const paths = new Set(value.files.map((file) => file.path));
+  for (const route of value.routes ?? []) if (!paths.has(route.file)) throw new Error("A route refers to a missing file");
+  if (new Set((value.routes ?? []).map((route) => JSON.stringify([route.file, route.method, route.path]))).size !== (value.routes?.length ?? 0)) throw new Error("Duplicate repository routes");
   for (const file of value.files) {
     if (!file.path || path.posix.isAbsolute(file.path) || file.path.includes("\\")
       || file.path.split("/").some((part) => part === ".." || part === "." || part === "")

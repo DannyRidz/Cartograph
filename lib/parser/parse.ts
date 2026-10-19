@@ -5,7 +5,7 @@ import { builtinModules } from "node:module";
 import { Project, SyntaxKind, ts } from "ts-morph";
 import { fallbackAdapter, type RepositoryAdapter } from "./adapter.ts";
 import { calculateFanCounts, deduplicateEdges } from "./graph.ts";
-import type { ImportKind, ImportOutcome, RepositoryEdge, RepositoryFile, RepositoryResult, SkippedFile } from "./types.ts";
+import type { ImportKind, ImportOutcome, RepositoryEdge, RepositoryFile, RepositoryResult, RepositoryRoute, SkippedFile } from "./types.ts";
 
 const excludedDirectories = new Set([
   ".git", "node_modules", ".next", ".turbo", ".vercel", ".pnpm-store",
@@ -111,6 +111,7 @@ export async function parseRepository(
     compilerOptions: { allowJs: true, checkJs: false, noResolve: true, jsx: ts.JsxEmit.Preserve },
   });
   const files: RepositoryFile[] = [];
+  const routes: RepositoryRoute[] = [];
   for (const absolute of candidates) {
     const relative = portable(path.relative(root, absolute));
     let content: string;
@@ -119,7 +120,8 @@ export async function parseRepository(
     project.createSourceFile(absolute, content, { overwrite: true });
   }
   const program = project.getProgram();
-  for (const source of project.getSourceFiles()) {
+  const sources = project.getSourceFiles();
+  for (const source of sources) {
     const relative = portable(path.relative(root, source.getFilePath()));
     const diagnostics = program.getSyntacticDiagnostics(source);
     if (diagnostics.length) {
@@ -128,9 +130,13 @@ export async function parseRepository(
     }
     const content = source.getFullText();
     const folder = portable(path.dirname(relative));
+    const input = { path: relative, folder, isModule: ts.isExternalModule(source.compilerNode) };
+    const classification = adapter.classify(input);
+    const inspection = adapter.inspect?.(input, source, sources);
+    if (inspection) routes.push(...inspection.routes);
     files.push({
       path: relative, folder,
-      ...adapter.classify({ path: relative, folder, isModule: ts.isExternalModule(source.compilerNode) }),
+      ...classification, role: inspection?.role ?? classification.kind,
       lineCount: content.length === 0 ? 0 : content.split(/\r\n|\r|\n/).length - (/\r?\n$|\r$/.test(content) ? 1 : 0),
       hash: createHash("sha256").update(content).digest("hex"),
       fanIn: 0, fanOut: 0,
@@ -205,6 +211,8 @@ export async function parseRepository(
   return {
     schemaVersion: 1, adapter: adapter.name,
     files: calculateFanCounts(files, uniqueEdges), edges: uniqueEdges,
+    routes: [...new Map(routes.map((route) => [JSON.stringify(route), route])).values()]
+      .sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method) || a.file.localeCompare(b.file)),
     coverage: { filesFound: found, filesParsed: files.length, filesSkipped: skipped.length,
       folders: new Set(files.map((file) => file.folder)).size, skipped,
       excludedDirectories: omitted, imports, totals },
