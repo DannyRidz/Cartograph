@@ -73,7 +73,72 @@ Reference: [Supabase with Clerk](https://supabase.com/docs/guides/auth/third-par
 Use `pnpm dev` to start the local application. The terminal checks are
 `pnpm typecheck`, `pnpm lint` and `pnpm build`.
 
+Turbopack's CSS workers need a local loopback port during a build. If an agent
+sandbox reports `binding to a port: Operation not permitted`, run the build with
+approved execution outside that sandbox. After selecting Node 24, the direct
+command is `node node_modules/next/dist/bin/next build`. Keep the regular
+`pnpm build` check; changing the app port does not fix a worker port restriction.
+
 The browser acceptance check remains in `docs/specs/phase-01.md` for you to run.
+
+## Phase 10 explanations and tracing
+
+Apply the phase 10 migration with `supabase db push` before using explanations.
+The migration adds an organization scoped AI cache with SELECT and INSERT policies,
+and permits explicit re-analysis while preserving completed maps. Ordinary URL
+submissions still open the most recent analysis. Concurrent fresh requests share
+the active run. All application access uses the publishable key and Clerk token.
+
+Set `OPENAI_API_KEY` in `.env.local`. New analyses label files unmatched by an
+adapter during the parse stage. Existing maps keep their original roles until
+you re-analyse them. Model failures fail the analysis visibly rather than silently
+omitting labels. The parser itself still has no AI or database dependency.
+
+Optional tracing settings in the same file:
+
+```dotenv
+LANGSMITH_API_KEY=
+LANGSMITH_TRACING=true
+LANGSMITH_PROJECT=Cartograph
+# Set this if your organization key requires an explicit workspace ID.
+LANGSMITH_WORKSPACE_ID=
+```
+
+A Tracing Only key restricted to one workspace is sufficient. Renew it before its
+expiry in LangSmith settings. Missing credentials or `LANGSMITH_TRACING=false`
+leaves model calls working, and the explanation pane displays that tracing is
+unconfigured. Configured credentials do not guarantee delivery; upload failures
+are reported in the server log. Never commit either API key.
+
+`lib/ai/client.ts` constructs and wraps the only OpenAI SDK client. Both tasks
+use `gpt-4.1-mini-2025-04-14`. The model snapshot, prompt revision, task kind,
+target content hashes and complete direct neighbour context form the cache key.
+Cache lookup occurs inside a `cartograph.file`, `cartograph.folder` or
+`cartograph.role` trace. Hits return zero usage and have no model child run.
+Change the revision when changing a prompt; changing the pinned model changes
+only that model's cache namespace. Cache rows disappear with their organization.
+
+File explanations receive verified source at the analysed commit and every direct
+import and dependent. Folder explanations receive every folded member's source
+and metadata, plus resolved internal and boundary edges. No graph traversal is
+delegated to the model. Requests beyond 600,000 characters fail explicitly rather
+than silently dropping context. Individual role classification accepts up to
+200,000 source characters. Source downloads have a 2 MB limit per file.
+
+Each Explain request checks GitHub HEAD and each explained member's SHA-256 hash.
+Stale responses describe the analysed commit and offer Re-analyse. A failed GitHub
+check fails visibly. The pane retains fetched responses across selections and tabs;
+Explain can be clicked again to check staleness and exercise the traced cache.
+
+Run `pnpm verify:ai`, `pnpm verify:explanation-prose` and `pnpm verify:pipeline` for terminal checks with mocked
+network responses and no model spend. Run
+`psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/verify-ai.sql`
+to verify tenant isolation, cache grants and fresh-run
+behaviour in a rolled back transaction. The browser acceptance check remains in
+`docs/specs/phase-10.md`.
+
+References: [pinned model](https://developers.openai.com/api/docs/models/gpt-4.1-mini),
+[LangSmith wrapper](https://reference.langchain.com/javascript/langsmith/wrappers/wrapOpenAI).
 
 ## Phase 02 database
 

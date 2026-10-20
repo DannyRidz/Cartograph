@@ -23,4 +23,12 @@ export const taxonomies: Record<string, { name: string; genericRoles: string[]; 
     { role: "model", label: "Models" }, { role: "module", label: "Modules" }, { role: "script", label: "Scripts" },
   ] },
 };
-export function taxonomy(adapter: string) { return taxonomies[adapter] ?? taxonomies.fallback; }
+const semanticCategories = [
+  { role: "service", label: "Services" }, { role: "repository", label: "Repositories" },
+  { role: "model", label: "Models" }, { role: "util", label: "Utilities" },
+  { role: "config", label: "Configuration" }, { role: "component", label: "Components" }, { role: "hook", label: "Hooks" },
+];
+export function taxonomy(adapter: string) {
+  const base = taxonomies[adapter] ?? taxonomies.fallback;
+  return { ...base, categories: [...base.categories, ...semanticCategories.filter((entry) => !base.categories.some((category) => category.role === entry.role))] };
+}

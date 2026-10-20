@@ -15,6 +15,8 @@
     "verify:progress": "node --experimental-strip-types scripts/verify-progress.ts",
     "verify:stored-map": "node --experimental-strip-types scripts/verify-stored-map.ts",
     "verify:pipeline": "node --experimental-strip-types scripts/verify-pipeline.ts",
+    "verify:ai": "node --experimental-strip-types scripts/verify-ai.ts",
+    "verify:explanation-prose": "node --experimental-strip-types scripts/verify-explanation-prose.ts",
     "verify:adapters": "node --experimental-strip-types scripts/verify-adapters.ts",
     "verify:parser": "node --experimental-strip-types scripts/verify-parser.ts",
     "verify:canvas": "node --experimental-strip-types scripts/verify-canvas.ts lib/fixtures/redux-toolkit.json",
@@ -25,7 +27,9 @@
     "@dagrejs/dagre": "^3.1.1",
     "@supabase/supabase-js": "2.117.3",
     "@xyflow/react": "^12.12.0",
+    "langsmith": "^0.11.0",
     "next": "16.4.0",
+    "openai": "^7.39.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "ts-morph": "^28.0.0"

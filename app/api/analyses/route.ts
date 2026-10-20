@@ -12,6 +12,7 @@ export async function POST(request: Request) {
     return Response.json({ message: "The request is too large." }, { status: 413 });
   }
   let repositoryUrl: string;
+  let reanalyse = false;
   try {
     const text = await request.text();
     if (text.length > 2048) return Response.json({ message: "The request is too large." }, { status: 413 });
@@ -20,12 +21,16 @@ export async function POST(request: Request) {
       throw new Error("Supply a repositoryUrl string.");
     }
     repositoryUrl = publicRepository(body.repositoryUrl).url;
+    if ("reanalyse" in body) {
+      if (typeof body.reanalyse !== "boolean") throw new Error("reanalyse must be a boolean.");
+      reanalyse = body.reanalyse;
+    }
   } catch (error: unknown) {
     return Response.json({ message: error instanceof Error ? error.message : "Invalid request." }, { status: 400 });
   }
   const database = await createDatabaseClient();
   try {
-    const analysis = await beginAnalysis(database, repositoryUrl);
+    const analysis = await beginAnalysis(database, repositoryUrl, reanalyse);
     if (!analysis.created) return Response.json({ id: analysis.id, existing: true });
     // Capture the authenticated client before the response. Next keeps this work
     // alive for the request lifecycle, without introducing a worker or queue.

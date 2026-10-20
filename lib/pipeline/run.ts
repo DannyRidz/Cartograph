@@ -8,10 +8,11 @@ import { parseRepository } from "../parser/parse.ts";
 import { validateRepositoryResult } from "../parser/data.ts";
 import { fetchArchive, selectArchive } from "./archive.ts";
 import { publicRepository, type PublicRepository } from "./repository.ts";
+import { classifyFiles } from "../ai/classify.ts";
 
-export async function beginAnalysis(database: SupabaseClient<Database>, url: string) {
+export async function beginAnalysis(database: SupabaseClient<Database>, url: string, reanalyse = false) {
   const repository = publicRepository(url);
-  const { data, error } = await database.rpc("begin_analysis", { p_repository_url: repository.url });
+  const { data, error } = await database.rpc("begin_analysis", { p_repository_url: repository.url, p_reanalyse: reanalyse });
   if (error) throw new Error(`Could not start the analysis: ${error.message}`, { cause: error });
   if (data?.length !== 1) throw new Error("Starting an analysis did not return exactly one row.");
   return { id: data[0].analysis_id, created: data[0].created, repository };
@@ -34,7 +35,8 @@ export async function runAnalysis(database: SupabaseClient<Database>, id: string
     temporary = await mkdtemp(path.join(tmpdir(), "cartograph-run-"));
     const root = await selectArchive(archive, temporary);
     await advance("parse", "Parsing TypeScript and JavaScript imports.");
-    const result = await parseRepository(root, await detectRepositoryAdapter(root));
+    const parsed = await parseRepository(root, await detectRepositoryAdapter(root));
+    const result = await classifyFiles(database, root, parsed);
     validateRepositoryResult(result);
     await advance("store", `Storing ${result.files.length} files and ${result.edges.length} resolved import edges.`);
     // Removing the archive before committing completion keeps cleanup failures
