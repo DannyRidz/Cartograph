@@ -1,3 +1,4 @@
+import { detectRepositoryAdapter } from "../adapters/detect.ts";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -33,7 +34,7 @@ export async function runAnalysis(database: SupabaseClient<Database>, id: string
     temporary = await mkdtemp(path.join(tmpdir(), "cartograph-run-"));
     const root = await selectArchive(archive, temporary);
     await advance("parse", "Parsing TypeScript and JavaScript imports.");
-    const result = await parseRepository(root);
+    const result = await parseRepository(root, await detectRepositoryAdapter(root));
     validateRepositoryResult(result);
     await advance("store", `Storing ${result.files.length} files and ${result.edges.length} resolved import edges.`);
     // Removing the archive before committing completion keeps cleanup failures

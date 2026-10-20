@@ -31,6 +31,17 @@ begin
     if sqlerrm = 'Invalid edge unexpectedly committed.' then raise; end if;
   end;
   if exists (select 1 from public.files where analysis_id = analysis) then raise exception 'Failed storage left partial files.'; end if;
+  begin
+    perform public.store_analysis(analysis, jsonb_set(parser_result, '{routes}', '[{"file":"missing.ts","method":"GET","path":"/missing"}]'));
+    raise exception 'Invalid route unexpectedly committed.';
+  exception when others then
+    if sqlerrm = 'Invalid route unexpectedly committed.' then raise; end if;
+  end;
+  if exists (select 1 from public.files where analysis_id = analysis)
+    or exists (select 1 from public.file_roles where analysis_id = analysis)
+    or exists (select 1 from public.routes where analysis_id = analysis) then
+    raise exception 'Failed route storage left partial data.';
+  end if;
   perform public.store_analysis(analysis, parser_result);
   if not exists (select 1 from public.analyses where id = analysis and state = 'completed' and commit_sha = repeat('a', 40)
     and coverage = parser_result -> 'coverage' and adapter = parser_result ->> 'adapter' and schema_version = 1) then
@@ -53,6 +64,24 @@ begin
       join public.files target on target.id = stored.target_file_id
       where stored.analysis_id = analysis and source.path = e."from" and target.path = e."to" and stored.kind = e.kind)
   ) then raise exception 'Stored import edges differ.'; end if;
+  select count(*) into count_rows from public.file_roles where analysis_id = analysis;
+  if count_rows <> (select count(*) from jsonb_array_elements(parser_result -> 'files') f where f ->> 'role' is not null) then
+    raise exception 'Stored role count differs.';
+  end if;
+  if exists (
+    select 1 from jsonb_to_recordset(parser_result -> 'files') as f(path text, role text)
+    join public.files stored on stored.analysis_id = analysis and stored.path = f.path
+    left join public.file_roles roles on roles.file_id = stored.id and roles.analysis_id = analysis
+    where f.role is not null and roles.role is distinct from f.role
+  ) then raise exception 'Stored roles differ.'; end if;
+  select count(*) into count_rows from public.routes where analysis_id = analysis;
+  if count_rows <> jsonb_array_length(coalesce(parser_result -> 'routes', '[]'::jsonb)) then raise exception 'Stored route count differs.'; end if;
+  if exists (
+    select 1 from jsonb_to_recordset(coalesce(parser_result -> 'routes', '[]'::jsonb)) as r(file text, method text, path text)
+    where not exists (select 1 from public.routes stored
+      join public.files f on f.id = stored.file_id
+      where stored.analysis_id = analysis and f.path = r.file and stored.method = r.method and stored.path = r.path)
+  ) then raise exception 'Stored routes differ.'; end if;
   select analysis_id into strict failed from public.begin_analysis('https://github.com/cartograph-verification/missing');
   perform public.fail_analysis(failed, 'fetch', 'Repository not found.');
   if not exists (select 1 from public.analyses where id = failed and state = 'failed' and failed_stage = 'fetch' and failure_message = 'Repository not found.') then
@@ -61,7 +90,9 @@ begin
   select analysis_id into strict running from public.begin_analysis('https://github.com/cartograph-verification/running');
   perform set_config('request.jwt.claims', '{"role":"authenticated","o":{"id":"org_PipelineVerifyB"}}', true);
   if exists (select 1 from public.analyses where id = analysis) or exists (select 1 from public.files where analysis_id = analysis)
-    or exists (select 1 from public.edges where analysis_id = analysis) then raise exception 'Cross organization data was visible.'; end if;
+    or exists (select 1 from public.edges where analysis_id = analysis)
+    or exists (select 1 from public.file_roles where analysis_id = analysis)
+    or exists (select 1 from public.routes where analysis_id = analysis) then raise exception 'Cross organization data was visible.'; end if;
   begin
     perform public.fail_analysis(running, 'fetch', 'Cross organization mutation.');
     raise exception 'Cross organization mutation succeeded.';

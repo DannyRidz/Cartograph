@@ -25,21 +25,31 @@ async function readPages<T>(read: (start: number, end: number) => PromiseLike<{
 
 export async function readStoredRepository(database: SupabaseClient<Database>, id: string, analysis: Analysis) {
   // RLS supplies ownership; the ID selects the analysis, never its permissions.
-  const [files, edges] = await Promise.all([
+  const [files, edges, roles, routes] = await Promise.all([
     readPages((start, end) => database.from("files")
       .select("id, path, folder, module, kind, line_count, hash, fan_in, fan_out", { count: "exact" })
       .eq("analysis_id", id).order("id").range(start, end)),
     readPages((start, end) => database.from("edges")
       .select("id, source_file_id, target_file_id, kind", { count: "exact" })
       .eq("analysis_id", id).order("id").range(start, end)),
+    readPages((start, end) => database.from("file_roles")
+      .select("id, file_id, role", { count: "exact" }).eq("analysis_id", id).order("id").range(start, end)),
+    readPages((start, end) => database.from("routes")
+      .select("id, file_id, method, path", { count: "exact" }).eq("analysis_id", id).order("id").range(start, end)),
   ]);
+  const roleByFile = new Map(roles.map((row) => [row.file_id, row.role]));
   const paths = new Map(files.map((file) => [file.id, file.path]));
   const repository: unknown = {
     schemaVersion: analysis.schema_version,
     adapter: analysis.adapter,
     coverage: analysis.coverage,
     files: files.map((file) => ({ path: file.path, folder: file.folder, module: file.module,
-      kind: file.kind, lineCount: file.line_count, hash: file.hash, fanIn: file.fan_in, fanOut: file.fan_out })),
+      kind: file.kind, ...(roleByFile.has(file.id) ? { role: roleByFile.get(file.id) } : {}), lineCount: file.line_count, hash: file.hash, fanIn: file.fan_in, fanOut: file.fan_out })),
+    routes: routes.map((route) => {
+      const file = paths.get(route.file_id);
+      if (!file) throw new Error("A stored route refers to a missing file.");
+      return { file, method: route.method, path: route.path };
+    }).sort((a, b) => a.path.localeCompare(b.path) || a.method.localeCompare(b.method) || a.file.localeCompare(b.file)),
     edges: edges.map((edge) => {
       const from = paths.get(edge.source_file_id);
       const to = paths.get(edge.target_file_id);

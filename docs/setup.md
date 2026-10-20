@@ -268,3 +268,54 @@ bounded pages, then validates them against the saved parser coverage. Live
 completion refreshes this route once to replace the pipeline with its map.
 `pnpm verify:stored-map` checks the parser round trip across pages, all three
 import kinds, partial coverage and rejection of incomplete or inaccessible data.
+
+## Phase 08 framework adapters
+
+Apply the phase 08 migration with `supabase db push`. It extends the existing
+atomic storage function to save file roles and routes alongside the graph.
+The existing tables keep their tenant read policies and composite file foreign
+keys. Session inserts use the request's Clerk organization claim.
+
+Detection uses declared dependencies from repository package manifests, in this
+fixed order: Next.js, NestJS, React, fallback. The first match wins. The rail
+uses a separate browser safe taxonomy with a fixed reading order, including
+zero counts. Selecting a category filters by its stored role. Selecting a route
+file opens the same file details as selecting it on the map.
+
+Next.js uses App Router and Pages Router path conventions. Patterns retain
+bracket parameters. App route methods require local exported functions or
+arrows; Pages API handlers do not imply a method. Server actions require a
+`use server` directive. Private App Router folders do not create page roles.
+Parallel and intercepted paths are omitted because their render context is not
+recoverable from a path alone. Static base paths are supported. Dynamic config,
+config calls, rewrites, locale routing, custom page extensions and explicit
+trailing slash settings leave routes absent. These omissions do not affect
+import edges or file coverage.
+
+NestJS roles use filename suffixes. Routes require decorators imported from
+`@nestjs/common`, including import aliases and namespace imports. Literal
+controller and method paths, including literal arrays, are combined. Computed
+arguments, controller options objects, inherited controllers, versioned methods,
+and `All` stay absent. Global prefixes, application versioning or router module
+mounts leave the route table empty rather than showing incomplete patterns.
+React uses JSX syntax for components and `use` followed by a capital letter
+for hook filenames. Files unmatched by convention retain generic roles.
+
+Existing completed analyses remain immutable and retain their original adapter.
+Use a repository not already analysed in the current organization, or a different
+organization, to exercise the new adapters. No rerun or automatic backfill is
+introduced.
+
+```sh
+pnpm verify:adapters /tmp/cartograph-phase08.json
+node --env-file=.env.local scripts/verify-pipeline-storage.ts /tmp/cartograph-phase08.json
+pnpm verify:stored-map
+pnpm typecheck
+pnpm lint
+pnpm build
+```
+
+The adapter check uses temporary source fixtures. The database check verifies
+exact stored roles and routes, tenant isolation and rollback of invalid route
+references; its rows are rolled back. Your browser acceptance check remains in
+`docs/specs/phase-08.md`.

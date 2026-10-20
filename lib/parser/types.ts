@@ -5,6 +5,7 @@ export interface RepositoryFile {
   folder: string;
   module: string;
   kind: "module" | "script";
+  role?: string;
   lineCount: number;
   hash: string;
   fanIn: number;
@@ -32,11 +33,18 @@ export interface SkippedFile {
   reason: string;
 }
 
+export interface RepositoryRoute {
+  file: string;
+  method: string;
+  path: string;
+}
+
 export interface RepositoryResult {
   schemaVersion: 1;
   adapter: string;
   files: RepositoryFile[];
   edges: RepositoryEdge[];
+  routes?: RepositoryRoute[];
   coverage: {
     filesFound: number;
     filesParsed: number;

@@ -8,10 +8,12 @@ import { layoutModules } from "@/lib/canvas/layout";
 import { PANEL_ROWS, ROW_HEIGHT, panelPorts, panelWindow } from "@/lib/canvas/window";
 import { canvasConnections } from "@/lib/canvas/connections";
 import { repositoryDetails } from "@/lib/canvas/details";
+import { RepositoryRoutes } from "@/components/repository-routes";
 import { RepositoryDetails } from "@/components/repository-details";
 import { CanvasShell } from "@/components/canvas-shell";
 import { indexGraph } from "@/lib/canvas/graph";
 import { repositoryInsights } from "@/lib/canvas/insights";
+import { taxonomy } from "@/lib/adapters/taxonomy";
 import { conventionalEntryFiles } from "@/lib/adapters/conventions";
 
 interface ModuleData extends Record<string, unknown> {
@@ -111,8 +113,8 @@ function Canvas({ repository, name }: { repository: RepositoryResult; name: stri
   const details = useMemo(() => repositoryDetails(repository.files, repository.edges), [repository]);
   const graph = useMemo(() => indexGraph(repository.files, repository.edges), [repository]);
   const insights = useMemo(() => repositoryInsights(repository.files, graph, conventionalEntryFiles(repository.files)), [repository, graph]);
-  const [category, setCategory] = useState<"module" | "script" | null>(null);
-  const categoryFiles = useMemo(() => category === null ? null : new Set(repository.files.filter((file) => file.kind === category).map((file) => file.path)), [repository, category]);
+  const [category, setCategory] = useState<string | null>(null);
+  const categoryFiles = useMemo(() => category === null ? null : new Set(repository.files.filter((file) => (file.role ?? file.kind) === category).map((file) => file.path)), [repository, category]);
   const [hovered, setHovered] = useState<string | null>(null);
   const highlighted = new Set(hovered === null ? [] : folded.modules.find((module) => module.id === hovered)?.files.map((file) => file.path) ?? [hovered]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -168,10 +170,13 @@ function Canvas({ repository, name }: { repository: RepositoryResult; name: stri
     id: edge.id, source: edge.source, target: edge.target, sourceHandle: edge.sourceHandle, targetHandle: edge.targetHandle, type: "default",
     style: { stroke: edge.direction === "incoming" ? "var(--incoming)" : edge.direction === "outgoing" ? "var(--outgoing)" : "var(--muted)", opacity: edge.active ? 0.8 : 0.08 },
   }));
-  const categories = (["module", "script"] as const).map((kind) => ({ kind, count: repository.files.filter((file) => file.kind === kind).length })).filter((category) => category.count > 0);
-  return <CanvasShell details={<RepositoryDetails name={name} repository={repository} details={details} folder={folded.modules.find((module) => module.id === selected)} selected={selected} highlighted={highlighted} select={selectFromDetails} hover={setHovered} graph={graph} insights={insights} />} rail={<><h2 id="categories-heading" className="panel-heading">File categories</h2><ul className="file-categories">{categories.map(({ kind, count }) => <li key={kind}><button aria-pressed={category === kind} onClick={() => setCategory((current) => current === kind ? null : kind)}><span className={`file-swatch ${kind}`} aria-hidden="true" /><span>{kind === "module" ? "Modules" : "Scripts"}</span><span>{count}</span></button></li>)}</ul><p className="canvas-coverage">{repository.coverage.filesParsed} parsed<br />{repository.coverage.filesSkipped} skipped<br />{repository.coverage.totals.unresolved} unresolved imports</p></>}>
+  const categories = taxonomy(repository.adapter).categories.map((entry) => ({ ...entry,
+    count: repository.files.filter((file) => (file.role ?? file.kind) === entry.role).length,
+  }));
+  return <CanvasShell details={<RepositoryDetails name={name} repository={repository} details={details} folder={folded.modules.find((module) => module.id === selected)} selected={selected} highlighted={highlighted} select={selectFromDetails} hover={setHovered} graph={graph} insights={insights} />} rail={<><h2 id="categories-heading" className="panel-heading">File categories</h2><ul className="file-categories">{categories.map(({ role, label, count }) => <li key={role}><button aria-pressed={category === role} onClick={() => setCategory((current) => current === role ? null : role)}><span>{label}</span><span>{count}</span></button></li>)}</ul><p className="canvas-coverage">{repository.coverage.filesParsed} parsed<br />{repository.coverage.filesSkipped} skipped<br />{repository.coverage.totals.unresolved} unresolved imports</p></>}>
     <div className="canvas-toolbar"><span>{folded.modules.length} folders</span><span>Height = incoming dependencies</span><button onClick={() => setSelected(null)} disabled={selected === null}>Clear selection</button></div>
-    <div className="canvas-flow"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.04, maxZoom: 1 }} nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} minZoom={0.05} maxZoom={2} onPaneClick={() => setSelected(null)}><Refit revision={[...opened].sort().join("|")} /><Controls showInteractive={false} /></ReactFlow></div>
+    <div className="canvas-flow canvas-flow-with-routes"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.04, maxZoom: 1 }} nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} minZoom={0.05} maxZoom={2} onPaneClick={() => setSelected(null)}><Refit revision={[...opened].sort().join("|")} /><Controls showInteractive={false} /></ReactFlow></div>
+    <RepositoryRoutes routes={repository.routes ?? []} selected={selected} select={selectFromDetails} hover={setHovered} />
   </CanvasShell>;
 }
 

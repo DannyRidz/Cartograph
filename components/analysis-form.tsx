@@ -29,6 +29,8 @@ export function AnalysisForm() {
       router.push(`/workspace/analyses/${result.id}`);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "The request failed. Try again.");
+    } finally {
+      // Client navigation can preserve this form when returning to the dashboard.
       setPending(false);
     }
   }
