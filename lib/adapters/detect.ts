@@ -6,6 +6,7 @@ import { fallbackAdapter, type RepositoryAdapter } from "../parser/adapter.ts";
 import { nextjsAdapter, type ApplicationRoot } from "./nextjs.ts";
 import { nestjsAdapter } from "./nestjs.ts";
 import { reactAdapter } from "./react.ts";
+import { expressAdapter } from "./express.ts";
 
 const excluded = new Set([".git", "node_modules", ".next", ".turbo", ".vercel", ".pnpm-store", "dist", "build", "out", "coverage"]);
 export async function detectRepositoryAdapter(directory: string): Promise<RepositoryAdapter> {
@@ -87,6 +88,7 @@ export async function detectRepositoryAdapter(directory: string): Promise<Reposi
     return nextjsAdapter(roots);
   }
   if (packages.some((entry) => entry.dependencies.has("@nestjs/core"))) return nestjsAdapter;
+  if (packages.some((entry) => entry.dependencies.has("express"))) return expressAdapter;
   if (packages.some((entry) => entry.dependencies.has("react"))) return reactAdapter;
   return fallbackAdapter;
 }

@@ -73,6 +73,29 @@ try {
   assert.equal(generic.result.adapter, "fallback");
   assert.deepEqual(generic.result.routes, []);
   assert.deepEqual(generic.result.files.map((file) => file.role), ["module", "script"]);
+  const expressSources: Record<string, string> = {
+    "package.json": '{"dependencies":{"express":"*","react":"*"}}',
+    "app.js": 'const router = require("./routes/users"); module.exports = router;',
+    "routes/users.js": 'const controller = require("../controllers/users"); router.get("/users", controller); module.exports = router;',
+    "controllers/users.js": 'exports.list = () => {};',
+    "plain.js": 'const x = 1;',
+  };
+  for (const [folder, role] of Object.entries({ route: "router", routes: "router", router: "router", routers: "router",
+    controller: "controller", controllers: "controller", middleware: "middleware", middlewares: "middleware",
+    service: "service", services: "service", model: "model", models: "model" })) {
+    expressSources[`src/${folder}/nested/example.cjs`] = 'module.exports = () => {};';
+    const single = await fixture(`express-${folder}`, expressSources);
+    assert.equal(single.result.files.find((file) => file.path === `src/${folder}/nested/example.cjs`)?.role, role);
+  }
+  const express = await fixture("express", expressSources);
+  assert.equal(express.result.adapter, "express");
+  assert.equal(express.result.edges.length, 2);
+  assert.equal(express.result.coverage.imports.length, 2);
+  assert.deepEqual(express.result.routes, []);
+  assert.equal(express.result.files.find((file) => file.path === "app.js")?.role, "module");
+  assert.equal(express.result.files.find((file) => file.path === "plain.js")?.role, "script");
+  assert(express.result.files.every((file) => taxonomy("express").categories.some((category) => category.role === file.role)));
+  console.log("Express: CommonJS graph, coverage denominator, singular and plural directory roles, detection precedence and empty routes passed.");
   assert.throws(() => validateRepositoryResult({ ...generic.result, routes: [{ file: "missing.ts", method: "GET", path: "/" }] }), /missing file/);
   if (process.argv[2]) await writeRepositoryResult(process.argv[2], nest.result);
   console.log("Adapters: detection order, roles, exact literal routes, aliases, namespace imports, dynamic omissions, config prefixes, private paths and fallback passed.");

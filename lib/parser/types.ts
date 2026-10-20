@@ -6,6 +6,7 @@ export interface RepositoryFile {
   module: string;
   kind: "module" | "script";
   role?: string;
+  exports?: string[];
   lineCount: number;
   hash: string;
   fanIn: number;

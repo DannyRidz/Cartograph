@@ -65,6 +65,37 @@ async function main(): Promise<void> {
     assert.throws(() => validateRepositoryResult({ ...imports, edges: [] }));
     console.log("Imports: aliases, all 3 edge kinds, deduplication, fan counts, exclusions, and nonliteral failures verified");
     console.log("Data contract: JSON round trip passes, invalid version and inconsistent edges rejected");
+
+    const commonFixture = path.join(root, "commonjs");
+    await mkdir(path.join(commonFixture, "folder"), { recursive: true });
+    await writeFile(path.join(commonFixture, "tsconfig.json"), JSON.stringify({ compilerOptions: { paths: { "@/*": ["./*"] } } }));
+    await writeFile(path.join(commonFixture, "package.json"), '{"dependencies":{"express":"*"}}');
+    await writeFile(path.join(commonFixture, "target.js"), 'exports.read = () => {}; module.exports.write = () => {}; exports["remove"] = () => {};');
+    await writeFile(path.join(commonFixture, "folder/index.cjs"), 'module.exports = { save() {}, "load": () => {}, [unknown]: 1, ...other };');
+    await writeFile(path.join(commonFixture, "entry.js"), [
+      'import "./target";', 'require("./target");', 'require("@/target");',
+      'require("./folder");', 'require("node:fs");', 'require("express");',
+      'require("./missing");', 'require(name);', 'object.require("./fake");',
+      'function local(require) { require("./fake"); }',
+      'module.exports = function app() {};',
+    ].join("\n"));
+    // Use an explicit .cjs path since resolution is deliberately identical to imports.
+    await writeFile(path.join(commonFixture, "folder-user.cjs"), 'const folder = require("./folder/index.cjs");');
+    await writeFile(path.join(commonFixture, "shadowed.js"), 'function local(exports, module) { exports.fake = 1; module.exports = {}; } const require = () => {}; require("./target");');
+    const common = await parseRepository(commonFixture);
+    validateRepositoryResult(common);
+    assert.equal(common.edges.filter((edge) => edge.from === "entry.js" && edge.to === "target.js").length, 1);
+    assert.deepEqual(common.coverage.totals, { resolved: 4, external: 2, excluded: 0, unresolved: 3 });
+    assert.deepEqual(common.files.find((file) => file.path === "target.js")?.exports, ["read", "remove", "write"]);
+    assert.deepEqual(common.files.find((file) => file.path === "folder/index.cjs")?.exports, ["load", "save"]);
+    assert.deepEqual(common.files.find((file) => file.path === "entry.js")?.exports, ["default"]);
+    assert(common.files.filter((file) => file.path !== "shadowed.js").every((file) => file.kind === "module"));
+    assert.equal(common.files.find((file) => file.path === "shadowed.js")?.kind, "script");
+    assert.equal(common.files.find((file) => file.path === "shadowed.js")?.exports, undefined);
+    assert(common.coverage.imports.some((entry) => entry.reason === "require() argument is not a string literal"));
+    await writeRepositoryResult(output, common);
+    assert.deepEqual(await readRepositoryResult(output), common);
+    console.log("CommonJS: shared resolution, mixed syntax deduplication, coverage, shadowed calls, export names and JSON round trip passed");
   } finally {
     await rm(root, { recursive: true, force: true });
   }
