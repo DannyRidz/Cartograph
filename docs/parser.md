@@ -31,9 +31,12 @@ including inherited options and aliases. Config errors fail the command.
 Without a config, TypeScript's bundler resolution is used. Files are selected
 by the walk, independently of config include and exclude lists.
 
-Each import declaration, export declaration with a module specifier, and dynamic
-import gets a coverage record with its source line. Only a literal string in a
-dynamic import can resolve. `require()` is outside phase 03. Exact asset paths
+Each import declaration, export declaration with a module specifier, dynamic
+import, and unshadowed `require()` call gets a coverage record with its source
+line. Only a literal string in a dynamic import or `require()` can resolve.
+CommonJS uses the same resolver and the existing `import` edge kind, so a mixed
+file retains both coverage records but only one edge to the same target.
+Nonliteral calls remain unresolved with a reason. Exact asset paths
 can be reported as excluded files, but never become source nodes. Packages
 resolved in `node_modules`, declared dependencies absent from disk, and Node
 builtins are external. Unknown specifiers remain unresolved with a reason.
@@ -50,6 +53,20 @@ module or script kind, line count, SHA256 content hash, and fan counts. A traili
 newline does not add an empty line. Empty files have zero lines. The fallback
 adapter uses the containing folder as the module and the TypeScript parser's
 module detection as the kind. It knows no framework conventions.
+
+CommonJS imports and export assignments also mark a file as a module. Parser
+JSON includes an optional `exports` list for CommonJS assignments: literal
+`exports.name`, `module.exports.name`, and object literal keys assigned to
+`module.exports`. An assigned value itself is named `default`. Dynamic member
+names and spread contents are omitted. These names are parser metadata, not
+additional edges, and are not stored in the database file rows.
+
+The Express adapter is selected from a declared `express` dependency, after
+Next.js and NestJS and before React. It classifies the nearest matching folder
+as router (route or router), controller, middleware, service, or model, accepting
+singular and plural folder names. Other files retain module or script roles.
+Express route tables are always empty because runtime mounting is not exact
+syntax evidence of a full route.
 
 Edges retain the import, re-export, or dynamic import kind. Duplicate edges with
 the same source, target, and kind collapse. Fan counts count distinct neighbouring

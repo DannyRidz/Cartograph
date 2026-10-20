@@ -17,5 +17,10 @@ export const taxonomies: Record<string, { name: string; genericRoles: string[]; 
     { role: "module", label: "Modules" }, { role: "script", label: "Scripts" },
   ] },
   fallback: { name: "Not detected", genericRoles: ["module", "script"], categories: [{ role: "module", label: "Modules" }, { role: "script", label: "Scripts" }] },
+  express: { name: "Express", genericRoles: ["module", "script"], categories: [
+    { role: "router", label: "Routers" }, { role: "controller", label: "Controllers" },
+    { role: "middleware", label: "Middleware" }, { role: "service", label: "Services" },
+    { role: "model", label: "Models" }, { role: "module", label: "Modules" }, { role: "script", label: "Scripts" },
+  ] },
 };
 export function taxonomy(adapter: string) { return taxonomies[adapter] ?? taxonomies.fallback; }

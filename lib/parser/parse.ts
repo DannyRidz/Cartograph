@@ -5,6 +5,7 @@ import { builtinModules } from "node:module";
 import { Project, SyntaxKind, ts } from "ts-morph";
 import { fallbackAdapter, type RepositoryAdapter } from "./adapter.ts";
 import { calculateFanCounts, deduplicateEdges } from "./graph.ts";
+import { commonJsExports, isRequire } from "./commonjs.ts";
 import type { ImportKind, ImportOutcome, RepositoryEdge, RepositoryFile, RepositoryResult, RepositoryRoute, SkippedFile } from "./types.ts";
 
 const excludedDirectories = new Set([
@@ -130,12 +131,15 @@ export async function parseRepository(
     }
     const content = source.getFullText();
     const folder = portable(path.dirname(relative));
-    const input = { path: relative, folder, isModule: ts.isExternalModule(source.compilerNode) };
+    const common = commonJsExports(source);
+    const input = { path: relative, folder, isModule: ts.isExternalModule(source.compilerNode) || common.isModule
+      || source.getDescendantsOfKind(SyntaxKind.CallExpression).some((call) => isRequire(call.getExpression())) };
     const classification = adapter.classify(input);
     const inspection = adapter.inspect?.(input, source, sources);
     if (inspection) routes.push(...inspection.routes);
     files.push({
       path: relative, folder,
+      ...(common.isModule ? { exports: common.names } : {}),
       ...classification, role: inspection?.role ?? classification.kind,
       lineCount: content.length === 0 ? 0 : content.split(/\r\n|\r|\n/).length - (/\r?\n$|\r$/.test(content) ? 1 : 0),
       hash: createHash("sha256").update(content).digest("hex"),
@@ -147,9 +151,9 @@ export async function parseRepository(
   const configuration = configurationReader(root);
   const imports: ImportOutcome[] = [];
   const edges: RepositoryEdge[] = [];
-  async function record(file: string, line: number, kind: ImportKind, specifier: string | null) {
+  async function record(file: string, line: number, kind: ImportKind, specifier: string | null, syntax = "dynamic import") {
     const outcome: ImportOutcome = { file, line, kind, specifier, status: "unresolved", target: null, reason: null };
-    if (specifier === null) outcome.reason = "dynamic import argument is not a string literal";
+    if (specifier === null) outcome.reason = `${syntax} argument is not a string literal`;
     else {
       const absolute = path.join(root, file);
       const config = configuration(path.dirname(absolute));
@@ -199,9 +203,10 @@ export async function parseRepository(
       if (specifier !== undefined) await record(file, declaration.getStartLineNumber(), "re-export", specifier);
     }
     for (const call of source.getDescendantsOfKind(SyntaxKind.CallExpression)) {
-      if (call.getExpression().getKind() !== SyntaxKind.ImportKeyword) continue;
+      const common = isRequire(call.getExpression());
+      if (!common && call.getExpression().getKind() !== SyntaxKind.ImportKeyword) continue;
       const argument = call.getArguments()[0];
-      await record(file, call.getStartLineNumber(), "dynamic-import", argument?.getKind() === SyntaxKind.StringLiteral ? argument.asKindOrThrow(SyntaxKind.StringLiteral).getLiteralValue() : null);
+      await record(file, call.getStartLineNumber(), common ? "import" : "dynamic-import", argument?.getKind() === SyntaxKind.StringLiteral ? argument.asKindOrThrow(SyntaxKind.StringLiteral).getLiteralValue() : null, common ? "require()" : "dynamic import");
     }
   }
   const uniqueEdges = deduplicateEdges(edges);

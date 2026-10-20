@@ -16,6 +16,8 @@ function file(value: unknown): value is RepositoryFile {
   return object(value) && typeof value.path === "string" && typeof value.folder === "string"
     && typeof value.module === "string" && (value.kind === "module" || value.kind === "script")
     && (value.role === undefined || (typeof value.role === "string" && value.role.length > 0))
+    && (value.exports === undefined || (Array.isArray(value.exports) && value.exports.every((name: unknown) => typeof name === "string")
+      && new Set(value.exports).size === value.exports.length))
     && count(value.lineCount) && typeof value.hash === "string" && /^[a-f0-9]{64}$/.test(value.hash)
     && count(value.fanIn) && count(value.fanOut);
 }
