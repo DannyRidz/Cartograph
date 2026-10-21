@@ -5,10 +5,13 @@ import { publicRepository } from "../pipeline/repository";
 import { foldRepository } from "../canvas/folding";
 import { fileContext } from "./context";
 import { cachedAI, contentHash } from "./cache";
-import { aiClient, MODEL, tracingConfigured, flushTraces } from "./client";
+import { MODEL, tracingConfigured, flushTraces } from "./client";
 import { repositoryHead, repositorySource } from "./repository-source";
 import type { Explanation } from "./types";
-import { explanationGraph, explanationPrompt, explanationSchema, renderExplanation } from "./explanation-context";
+import { explanationGraph, explanationPrompt, explanationSchema } from "./explanation-context";
+import { evaluatedExplanation } from "./evaluate-explanation";
+import { pathReferences } from "./path-references";
+import { completeExplanation, generateExplanation, EXPLANATION_GENERATION_VERSION } from "./generate-explanation";
 
 export async function explain(analysisId: string, target: string, kind: "file" | "folder"): Promise<Explanation> {
   const analysis = await getAnalysis(analysisId);
@@ -47,28 +50,24 @@ export async function explain(analysisId: string, target: string, kind: "file" |
   const stale = changed ? `${changed} explained ${changed === 1 ? "file has" : "files have"} changed or been removed since this analysis.`
     : head !== analysis.commit_sha ? "The repository has moved past the commit that was analysed." : null;
   try {
+    // Reference evidence must describe the analysed source even on stale cache
+    // hits. Current HEAD source must not excuse symbols in an older explanation.
+    if (stale) for (const member of members) {
+      if (sources.has(member.path)) continue;
+      const source = await repositorySource(publicRepo, commit, member.path);
+      if (source === null || contentHash(source) !== member.hash) throw new Error("The analysed file content could not be verified. Re-analyse the repository.");
+      sources.set(member.path, source);
+    }
+    const externalSpecifiers = repository.coverage.imports.flatMap((entry) =>
+      entry.status === "external" && memberPaths.has(entry.file) && entry.specifier ? [entry.specifier] : []);
     // Prompt changes invalidate explanations without discarding role labels.
-    const result = await cachedAI(database, kind, { prompt: explanationPrompt, schema, target, context, graph }, async () => {
-      if (stale) {
-        // The stored graph is immutable. Never explain new source with old edges.
-        for (const member of members) {
-          if (sources.has(member.path)) continue;
-          const source = await repositorySource(publicRepo, commit, member.path);
-          if (source === null || contentHash(source) !== member.hash) throw new Error("The analysed file content could not be verified. Re-analyse the repository.");
-          sources.set(member.path, source);
-        }
-      }
+    const result = await evaluatedExplanation([...suppliedPaths].sort(), () => cachedAI(database, kind, { generation: EXPLANATION_GENERATION_VERSION, prompt: explanationPrompt, schema, target, context, graph }, async () => {
       const input = JSON.stringify({ kind, target, context, graph, sources: [...sources].map(([path, source]) => ({ path, source })) });
       if (input.length > 600_000) throw new Error("This selection exceeds the 600,000 character explanation input limit. No files or neighbours were omitted. Select a smaller folder or file.");
-      const response = await aiClient().chat.completions.create({ model: MODEL, temperature: 0, max_completion_tokens: 1800,
-        messages: [{ role: "system", content: explanationPrompt }, { role: "user", content: input }],
-        response_format: { type: "json_schema", json_schema: { name: "source_summaries", strict: true, schema } },
-      });
-      const body = response.choices[0]?.message.content;
-      if (!body?.trim() || response.choices[0]?.finish_reason !== "stop") throw new Error("The model did not return a complete explanation. Try again.");
-      const summaries: unknown = JSON.parse(body);
-      return renderExplanation(summaries, kind, [...memberPaths], [...suppliedPaths], graph);
-    });
+      const explanation = await generateExplanation({ kind, input, members: [...memberPaths], paths: [...suppliedPaths], graph }, completeExplanation);
+      if (!explanation.valid) throw new Error(explanation.rejection);
+      return explanation.body;
+    }), () => pathReferences([...sources].map(([path, source]) => ({ path, source })), externalSpecifiers));
     return { body: result.body, cached: result.cached, stale, paths: [...suppliedPaths].sort(), checkedAt: new Date().toISOString(), tracing: tracingConfigured(), model: MODEL };
   } finally { await flushTraces(); }
 }

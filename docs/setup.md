@@ -162,6 +162,133 @@ also in a transaction that rolls back.
 References: [pinned model](https://developers.openai.com/api/docs/models/gpt-4.1-mini),
 [LangSmith wrapper](https://reference.langchain.com/javascript/langsmith/wrappers/wrapOpenAI).
 
+## Phase 11 evals
+
+Scripts load `.env.local` with Next's installed environment loader, including
+variable expansion and the same precedence as the app. They default to development;
+set `NODE_ENV=production` for production environment files. Use Node 22 or newer.
+
+Phase 11 requires `OPENAI_API_KEY`, `LANGSMITH_API_KEY` and
+`LANGSMITH_TRACING=true` in `.env.local`. **A Tracing Only LangSmith key is not
+enough for evals.** Use a standard key for your workspace with dataset read/write,
+experiment creation, run read and feedback write access. Keep the existing
+`LANGSMITH_WORKSPACE_ID` if your workspace needs it. Missing permissions fail
+the scripts loudly. Live feedback upload failures appear in the server log.
+
+```sh
+pnpm verify:evals
+pnpm eval:paths
+pnpm eval:paths --inject
+pnpm eval:roles
+pnpm eval:prompts
+pnpm eval:results
+```
+
+`verify:evals` uses no external services or model calls. It verifies the detector,
+source hashes, hidden role labels, complete selections and the live feedback
+integration using mocked network responses.
+
+Every successful Explain request creates a `cartograph.explanation` trace whose
+input records the exact supplied repository paths and whose output includes the
+served explanation, cache status, deterministic path evaluation and source
+reference evidence. It uploads
+an `invented_paths` feedback score, including on cache hits. One means no invented
+path tokens, zero means at least one. No model judges this metric.
+
+`eval:paths` rechecks up to fifty such real traces from the last seven days and
+prints the score. Failures print the run ID, exact offending tokens, allowed paths
+and explanation for inspection. This is a bounded read, not a polling loop.
+Explain a real file or folder after starting the phase 11 app before running it.
+Older traces did not retain the allowed path set and cannot be scored honestly.
+No traffic is an error, never a passing score. `--inject` adds a guaranteed absent
+filename to each explanation in memory; it must report zero percent and exit 1.
+It does not change stored traces or write feedback for the injected answer.
+
+Path evaluator version 2 recognizes filenames with extensions, dotfiles,
+explicit relative/absolute paths and quoted directory paths, including bracketed
+route segments and spaces in quoted filenames. Case, leading `./` and basenames
+are not normalized. A basename counts as invented unless that exact basename was
+supplied. A slash in ordinary prose, such as serialization/deserialization, is
+not by itself a path. Framework names such as Next.js are prose unless explicitly
+labelled as a file/path or written with a path prefix. URL destinations are not
+repository paths; file paths in link labels are checked.
+File extension descriptors such as `.ts` are not filenames unless explicitly
+labelled as a file/path. Path patterns are checked intact, and structured source
+summary JSON is decoded before checking its string values, so serialization
+punctuation and quoted prose cannot create invented filename fragments.
+
+Parser import outcomes identify external packages; source syntax confirms their
+specifiers and identifies member symbols. Bare module specifiers without a filename
+component are also recorded as source references even when resolution was unavailable.
+No connection is inferred. File shaped aliases and explicit file/path claims still
+require exact membership. References are recorded separately in the trace and are
+not added to the set of allowed repository paths. For example, an actual
+`next/app` import or `QueryClientContext.Provider` symbol can be described without
+claiming it is a repository file. An explicit file/path label still makes the
+token a file claim and subjects it to exact membership. Source strings containing
+filenames do not become allowed paths or ignored symbols. Version 1 experiment
+path scores predate this correction and should not be used for comparisons.
+
+The frozen dataset comes from public [TanStack/query commit
+5393cdc](https://github.com/TanStack/query/tree/5393cdc2651af9260f3fc97c4505ab280f4e0131).
+It contains 42 distinct files labelled by the actual framework adapters, all in
+the classifier's allowed semantic role set. The target role is removed before
+prediction. Source, paths and other ordinary metadata remain visible, just as in
+normal classification. Tests are excluded. This corpus covers React hooks and
+components, not every allowed role, and measures agreement with conventions.
+The classifier function, prompt, schema and pinned model are shared with the app.
+Each package or example is parsed independently; graph endpoints remain relative
+to that parse root. No cross boundary imports are guessed. The MIT licence is
+retained in `evals/TANSTACK-LICENSE`. To rebuild the same snapshot:
+
+```sh
+pnpm eval:dataset /path/to/extracted/query-5393cdc2651af9260f3fc97c4505ab280f4e0131
+```
+
+`eval:roles` reports the exact match percentage and each disagreement. It also
+creates a LangSmith experiment with a `role_accuracy` score per file.
+`eval:prompts` creates two experiments on the same six frozen file and folder
+selections, named `cartograph-explanation-retired` and
+`cartograph-explanation-current` with generated suffixes. In LangSmith Datasets,
+open the `cartograph-explanations-…` dataset, select both experiments and Compare.
+Their input examples are identical. The retired prompt is copied from commit
+`f0bf364` and lives only in `evals/`. The current version uses the application's
+prompt, JSON schema, strict validator, bounded correction and parser renderer.
+The production function is shared with the eval target. If JSON or a summary
+violates validation, one correction request receives the exact rejection and
+unchanged source facts; validation runs again. There are at most two completions.
+Transport errors fail immediately and a second invalid response still fails.
+Rejected current summaries
+receive zero usefulness and `answer_available=0`, rather than disappearing.
+This compares the complete prompt versions, including their output contracts.
+
+**Usefulness is a subjective model judgment, not an exact answer.** The fixed
+judge uses the same pinned model, a recorded rubric from zero to four, normalized
+to zero through one for dashboard scores. The terminal prints both mean scores
+and current minus retired in percentage points, alongside exact path pass rates.
+Treat the small corpus and judge preference as limits on any claimed improvement.
+
+These commands upload public source inputs to LangSmith and make model calls on
+cache misses. The eval cache lives in ignored `evals/.cache/`, keyed by model,
+prompt, schema and complete input. Its read occurs inside each eval trace; cache
+hits contain no model call. Delete that directory for fresh trials. Immutable
+dataset names include input hashes; an incomplete upload fails explicitly.
+
+Experiment commands now save the exact expected per run scores in the ignored
+eval cache. Each evaluator flushes prediction traces before posting feedback;
+otherwise batched trace uploads can race feedback writes and leave partial
+dashboard aggregates. Commands verify every stored root run, every feedback score,
+and each dashboard aggregate's count and mean before reporting completion.
+LangSmith aggregates can lag behind individual feedback writes. A bounded retry
+waits at most two minutes between reads in total; authentication or API failures still fail
+loudly. If aggregation is still incomplete, the command exits 1 and claims no
+completion. `pnpm eval:results` rechecks the saved experiments without new model
+calls or new experiments. Missing or inconsistent scores never become a pass.
+The comparison URL printed by `eval:prompts` puts both experiment IDs in a single
+comma separated `selectedSessions` parameter, so both open side by side.
+
+API reference: [LangSmith evaluation](https://reference.langchain.com/javascript/langsmith/evaluation).
+
 ## Phase 02 database
 
 The first migration creates the eight data tables plus the agreed organizations
