@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { inventedPaths } from "../lib/ai/invented-paths.ts";
 import { caseGraph, loadDataset, record } from "../evals/dataset.ts";
 import { contentHash } from "../lib/ai/cache.ts";
@@ -168,3 +169,39 @@ try {
   await flushTraces();
   globalThis.fetch = originalFetch;
 }
+
+// Exercise the real CLI twice against the same stored trace. Rechecks must
+// never add feedback; the request-time evaluator above owns that write.
+for (const inject of [false, true]) {
+  const child = spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "--eval", `
+    import assert from 'node:assert/strict';
+    let writes = 0;
+    let reads = 0;
+    globalThis.fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('/sessions')) return Response.json([{ id: '00000000-0000-4000-8000-000000000001', name: 'Cartograph' }]);
+      if (url.includes('/runs/query')) {
+        reads++;
+        return Response.json({ runs: [{ id: '00000000-0000-4000-8000-000000000003',
+          session_id: '00000000-0000-4000-8000-000000000001', end_time: new Date().toISOString(),
+          inputs: { paths: ['src/a.ts'] }, outputs: { body: 'Describes \\x60src/a.ts\\x60.' } }], cursors: {} });
+      }
+      writes++;
+      return Response.json({ id: '00000000-0000-4000-8000-000000000002' });
+    };
+    process.on('beforeExit', () => {
+      assert.equal(reads, 2);
+      assert.equal(writes, 0, 'Path rechecks must not write feedback.');
+    });
+    await import(${JSON.stringify(new URL("./eval-paths.ts?first", import.meta.url).href)});
+    await import(${JSON.stringify(new URL("./eval-paths.ts?second", import.meta.url).href)});
+  `, ...(inject ? ["--", "--inject"] : [])], {
+    encoding: "utf8", timeout: 30_000,
+    env: { ...process.env, LANGSMITH_TRACING: "true", LANGSMITH_API_KEY: "verification-only-key" },
+  });
+  assert.ifError(child.error);
+  assert.equal(child.status, inject ? 1 : 0, child.stderr);
+  assert(!child.stderr.includes("AssertionError"), child.stderr);
+  assert.equal(child.stdout.match(inject ? /Injected path pass rate: 0\.00% \(0\/1\)/g : /Live path pass rate: 100\.00% \(1\/1\)/g)?.length, 2);
+}
+console.log("Path recheck CLI verified: repeated normal and injected runs never write feedback.");

@@ -33,10 +33,6 @@ async function main() {
     count++;
     passed += result.score;
     if (!result.score) console.log(JSON.stringify({ run: run.id, invented: result.invented, supplied: paths, explanation: evaluatedBody }));
-    if (!inject) {
-      if (!run.session_id) throw new Error(`Run ${run.id} has no LangSmith project ID.`);
-      await client.createFeedback({ runId: run.id, sessionId: run.session_id, key: result.key, score: result.score, comment: result.comment });
-    }
   }
   if (!count) throw new Error("No completed phase 11 explanation traces in the last seven days. Explain a real file or folder with tracing enabled, then retry.");
   console.log(`${inject ? "Injected" : "Live"} path pass rate: ${(100 * passed / count).toFixed(2)}% (${passed}/${count}); ${skipped} unfinished/error runs skipped.`);

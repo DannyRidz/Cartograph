@@ -197,7 +197,8 @@ path tokens, zero means at least one. No model judges this metric.
 
 `eval:paths` rechecks up to fifty such real traces from the last seven days and
 prints the score. Failures print the run ID, exact offending tokens, allowed paths
-and explanation for inspection. This is a bounded read, not a polling loop.
+and explanation for inspection. Rechecks never write feedback; only the live
+request evaluator records it. This is a bounded read, not a polling loop.
 Explain a real file or folder after starting the phase 11 app before running it.
 Older traces did not retain the allowed path set and cannot be scored honestly.
 No traffic is an error, never a passing score. `--inject` adds a guaranteed absent
