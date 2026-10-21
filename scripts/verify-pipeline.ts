@@ -95,7 +95,7 @@ async function main() {
     calls.length = 0;
     const completed = await runAnalysis(database, "verification-id", repository);
     assert.equal(completed.state, "completed");
-    assert.deepEqual(calls.map((call) => call.name), ["advance_analysis", "advance_analysis", "advance_analysis", "store_analysis"]);
+    assert.deepEqual(calls.map((call) => call.name), ["heartbeat_analysis", "advance_analysis", "advance_analysis", "advance_analysis", "store_analysis"]);
     assert.deepEqual(calls.filter((call) => call.name === "advance_analysis").map((call) => call.args.p_stage), ["select", "parse", "store"]);
     const stored = calls.at(-1)?.args.p_result;
     validateRepositoryResult(stored);

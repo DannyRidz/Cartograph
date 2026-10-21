@@ -88,9 +88,13 @@ The migration adds an organization scoped AI cache with SELECT and INSERT polici
 and permits explicit re-analysis while preserving completed maps. Ordinary URL
 submissions still open the most recent analysis. Concurrent fresh requests share
 the active run. All application access uses the publishable key and Clerk token.
-Active runs are reused regardless of age. If a process dies before recording a
-final state, Re-analyse will keep returning that stale run. Automatic replacement
-is deferred until run expiry can distinguish abandoned work from a long analysis.
+Apply the phase 10 run recovery migration as well. A running process records
+activity every 30 seconds using its Clerk authenticated client. Re-analyse reuses
+a live run, but marks one with no activity for over five minutes as failed before
+starting its replacement. Expired workers cannot renew, advance or complete their
+old run. Heartbeat failure stops new classification work and aborts model calls.
+No database reads run on a timer. Activity is published on the existing private
+progress channel, so slow runs do not become stale while they keep reporting.
 
 Set `OPENAI_API_KEY` in `.env.local`. New analyses label files unmatched by an
 adapter during the parse stage. Existing maps keep their original roles until
@@ -145,12 +149,15 @@ Without it, the server shares GitHub's unauthenticated rate limit. HEAD is not
 memoized, so a reload does not hide a newly pushed commit behind a time window.
 
 Run `pnpm verify:ai`, `pnpm verify:ai-review`, `pnpm verify:explanation-prose`
-and `pnpm verify:pipeline` for terminal checks with mocked
+`pnpm verify:heartbeat` and `pnpm verify:pipeline` for terminal checks with mocked
 network responses and no model spend. Run
 `psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/verify-ai.sql`
 to verify tenant isolation, cache grants and fresh-run
 behaviour in a rolled back transaction. The browser acceptance check remains in
 `docs/specs/phase-10.md`.
+Run `psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/verify-run-recovery.sql`
+for renewal, expiry, replacement, old worker fencing and tenant isolation checks,
+also in a transaction that rolls back.
 
 References: [pinned model](https://developers.openai.com/api/docs/models/gpt-4.1-mini),
 [LangSmith wrapper](https://reference.langchain.com/javascript/langsmith/wrappers/wrapOpenAI).
@@ -264,8 +271,8 @@ removed after either outcome.
 
 Files, edges, coverage and completion commit in one transaction. A failure
 records its stage and reason. If the failure cannot be written, the server log
-reports it. There is no queue or process recovery. Unfinished runs whose last
-stage change is over five minutes old are marked stale. A local clock updates
+reports it. There is no queue or automatic restart. Unfinished runs whose last
+recorded activity is over five minutes old are marked stale. A local clock updates
 that label without making database requests.
 
 ### Realtime

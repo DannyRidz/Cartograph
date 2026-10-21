@@ -45,6 +45,11 @@ async function main() {
     await assert.rejects(classifyFiles(database, root, { ...repository, files: [file("large.ts", large)] }), /large.ts.*200,000 character/);
     assert.equal(reads, before, "Oversized sources must fail before an AI cache or model request.");
 
+    const lostLease = new AbortController();
+    lostLease.abort(new Error("Lease lost during analysis."));
+    await assert.rejects(classifyFiles(database, root, repository, lostLease.signal), /Lease lost during analysis/);
+    assert.equal(reads, before, "A lost lease must prevent classification dispatch.");
+
     const requests: { url: string; headers: Headers }[] = [];
     globalThis.fetch = async (input, init) => {
       requests.push({ url: String(input), headers: new Headers(init?.headers) });

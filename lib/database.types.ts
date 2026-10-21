@@ -55,6 +55,7 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      heartbeat_analysis: { Args: { p_analysis_id: string }; Returns: undefined };
       begin_analysis: { Args: { p_repository_url: string; p_reanalyse?: boolean }; Returns: { analysis_id: string; created: boolean }[] };
       advance_analysis: { Args: { p_analysis_id: string; p_expected_stage: PipelineStage;
         p_stage: PipelineStage; p_message: string; p_commit_sha?: string }; Returns: undefined };
