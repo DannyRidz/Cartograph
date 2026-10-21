@@ -8,8 +8,10 @@ import { walkGraph, type GraphIndex, type Direction } from "@/lib/canvas/graph";
 import type { repositoryInsights } from "@/lib/canvas/insights";
 import { taxonomy } from "@/lib/adapters/taxonomy";
 import { RepositoryInsights } from "@/components/repository-insights";
+import { ExplanationPane, type ExplanationContext } from "@/components/explanation-pane";
 
 interface DetailsProps {
+  explanation?: ExplanationContext;
   name: string;
   repository: RepositoryResult;
   details: ReturnType<typeof repositoryDetails>;
@@ -23,7 +25,7 @@ interface DetailsProps {
 }
 
 /** Shows repository, folder, or file details with two-level graph walks and shared insights. */
-export function RepositoryDetails({ name, repository, details, folder, selected, highlighted, select, hover, graph, insights }: DetailsProps) {
+export function RepositoryDetails({ name, repository, details, folder, selected, highlighted, select, hover, graph, insights, explanation }: DetailsProps) {
   const framework = taxonomy(repository.adapter);
   const routes = repository.routes ?? [];
   const [tab, setTab] = useState<"structure" | "explanation">("structure");
@@ -49,7 +51,8 @@ export function RepositoryDetails({ name, repository, details, folder, selected,
       {(["structure", "explanation"] as const).map((value) => <button key={value} id={`detail-tab-${value}`} role="tab" aria-selected={tab === value} aria-controls={`detail-panel-${value}`} tabIndex={tab === value ? 0 : -1} onClick={() => setTab(value)}>{value === "structure" ? "Structure" : "Explanation"}</button>)}
     </div>
     <div className="detail-content" id={`detail-panel-${tab}`} role="tabpanel" aria-labelledby={`detail-tab-${tab}`} tabIndex={0}>
-      {tab === "explanation" ? <p className="detail-note">No explanation yet. Explanations will appear here when model calls are available.</p> : file ? <>
+      <div hidden={tab !== "explanation"}><ExplanationPane context={explanation} target={file || folder ? selected : null} kind={file ? "file" : "folder"} select={select} /></div>
+      {tab === "explanation" ? null : file ? <>
         {pathButton(file.file.path)}
         <dl className="detail-facts"><dt>Role</dt><dd>{framework.categories.find((category) => category.role === (file.file.role ?? file.file.kind))?.label ?? file.file.kind}</dd><dt>Lines</dt><dd>{file.file.lineCount}</dd><dt>Dependencies</dt><dd>{file.imports.length}</dd><dt>Dependents</dt><dd>{file.dependents.length}</dd></dl>
         {paths("Depends on", file.imports)}{paths("Depended on by", file.dependents)}
@@ -68,7 +71,7 @@ export function RepositoryDetails({ name, repository, details, folder, selected,
       </> : <>
         <p className="detail-name">{name}</p>
         <dl className="detail-facts"><dt>Framework</dt><dd>{framework.name}</dd><dt>Files</dt><dd>{repository.files.length}</dd><dt>Imports seen</dt><dd>{repository.coverage.imports.length}</dd><dt>Routes</dt><dd>{routes.length}</dd><dt>Unidentified by convention</dt><dd>{repository.files.filter((file) => framework.genericRoles.includes(file.role ?? file.kind)).length}</dd></dl>
-        <p className="detail-note">Roles come from framework conventions. Routes appear only when their method and full pattern are recoverable.</p>
+        <p className="detail-note">Framework conventions own structural roles. AI labels files unmatched by convention. Routes appear only when their method and full pattern are recoverable.</p>
         <section className="detail-section"><h3>Most depended on <span>{details.mostImported.length}</span></h3><p className="detail-note">Ranked by distinct importing files.</p>{details.mostImported.length ? <ol className="detail-paths">{details.mostImported.map((item) => <li key={item.file.path}>{pathButton(item.file.path, item.dependents.length)}</li>)}</ol> : <p className="detail-note">No files have dependents.</p>}</section>
         <section className="detail-section"><h3>Where to start reading <span>{details.entryFiles.length}</span></h3><p className="detail-note">Nothing imports these files. Ranked by dependency count.</p>{details.entryFiles.length ? <ol className="detail-paths">{details.entryFiles.map((item) => <li key={item.file.path}>{pathButton(item.file.path, item.imports.length)}</li>)}</ol> : <p className="detail-note">Every file has dependents.</p>}</section>
       </>}

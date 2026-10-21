@@ -73,7 +73,94 @@ Reference: [Supabase with Clerk](https://supabase.com/docs/guides/auth/third-par
 Use `pnpm dev` to start the local application. The terminal checks are
 `pnpm typecheck`, `pnpm lint` and `pnpm build`.
 
+Turbopack's CSS workers need a local loopback port during a build. If an agent
+sandbox reports `binding to a port: Operation not permitted`, run the build with
+approved execution outside that sandbox. After selecting Node 24, the direct
+command is `node node_modules/next/dist/bin/next build`. Keep the regular
+`pnpm build` check; changing the app port does not fix a worker port restriction.
+
 The browser acceptance check remains in `docs/specs/phase-01.md` for you to run.
+
+## Phase 10 explanations and tracing
+
+Apply the phase 10 migration with `supabase db push` before using explanations.
+The migration adds an organization scoped AI cache with SELECT and INSERT policies,
+and permits explicit re-analysis while preserving completed maps. Ordinary URL
+submissions still open the most recent analysis. Concurrent fresh requests share
+the active run. All application access uses the publishable key and Clerk token.
+Apply the phase 10 run recovery migration as well. A running process records
+activity every 30 seconds using its Clerk authenticated client. Re-analyse reuses
+a live run, but marks one with no activity for over five minutes as failed before
+starting its replacement. Expired workers cannot renew, advance or complete their
+old run. Heartbeat failure stops new classification work and aborts model calls.
+No database reads run on a timer. Activity is published on the existing private
+progress channel, so slow runs do not become stale while they keep reporting.
+
+Set `OPENAI_API_KEY` in `.env.local`. New analyses label files unmatched by an
+adapter during the parse stage. Existing maps keep their original roles until
+you re-analyse them. Model failures fail the analysis visibly rather than silently
+omitting labels. The parser itself still has no AI or database dependency.
+
+Optional tracing settings in the same file:
+
+```dotenv
+LANGSMITH_API_KEY=
+LANGSMITH_TRACING=true
+LANGSMITH_PROJECT=Cartograph
+# Set this if your organization key requires an explicit workspace ID.
+LANGSMITH_WORKSPACE_ID=
+```
+
+A Tracing Only key restricted to one workspace is sufficient. Renew it before its
+expiry in LangSmith settings. Missing credentials or `LANGSMITH_TRACING=false`
+leaves model calls working, and the explanation pane displays that tracing is
+unconfigured. Configured credentials do not guarantee delivery; upload failures
+are reported in the server log. Never commit either API key.
+
+`lib/ai/client.ts` constructs and wraps the only OpenAI SDK client. Both tasks
+use `gpt-4.1-mini-2025-04-14`. The model snapshot, prompt revision, task kind,
+target content hashes and complete direct neighbour context form the cache key.
+Cache lookup occurs inside a `cartograph.file`, `cartograph.folder` or
+`cartograph.role` trace. Hits return zero usage and have no model child run.
+Change the revision when changing a prompt; changing the pinned model changes
+only that model's cache namespace. Cache rows disappear with their organization.
+
+File explanations receive verified source at the analysed commit and every direct
+import and dependent. Folder explanations receive every folded member's source
+and metadata, plus resolved internal and boundary edges. No graph traversal is
+delegated to the model. Requests beyond 600,000 characters fail explicitly rather
+than silently dropping context. Individual role classification accepts up to
+200,000 source characters. A repository containing an unmatched file above that
+limit cannot complete analysis: the failed run names the file and limit. No
+classification is silently skipped. After any classification failure, workers
+stop taking new files while requests already in progress finish. Source
+downloads have a 2 MB limit per file.
+
+Each Explain request checks GitHub HEAD and each explained member's SHA-256 hash.
+Stale responses describe the analysed commit and offer Re-analyse. A failed GitHub
+check fails visibly. The pane retains fetched responses across selections and tabs;
+Explain can be clicked again to check staleness and exercise the traced cache.
+
+GitHub HEAD checks use the public API on every Explain request, including cache
+hits. You can optionally set `GITHUB_TOKEN` in `.env.local` to use an authenticated
+rate limit. Use a token with minimal access appropriate to public repositories.
+It is sent only to `api.github.com`, never to raw source downloads or the browser.
+Without it, the server shares GitHub's unauthenticated rate limit. HEAD is not
+memoized, so a reload does not hide a newly pushed commit behind a time window.
+
+Run `pnpm verify:ai`, `pnpm verify:ai-review`, `pnpm verify:explanation-prose`
+`pnpm verify:heartbeat` and `pnpm verify:pipeline` for terminal checks with mocked
+network responses and no model spend. Run
+`psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/verify-ai.sql`
+to verify tenant isolation, cache grants and fresh-run
+behaviour in a rolled back transaction. The browser acceptance check remains in
+`docs/specs/phase-10.md`.
+Run `psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/verify-run-recovery.sql`
+for renewal, expiry, replacement, old worker fencing and tenant isolation checks,
+also in a transaction that rolls back.
+
+References: [pinned model](https://developers.openai.com/api/docs/models/gpt-4.1-mini),
+[LangSmith wrapper](https://reference.langchain.com/javascript/langsmith/wrappers/wrapOpenAI).
 
 ## Phase 02 database
 
@@ -184,8 +271,8 @@ removed after either outcome.
 
 Files, edges, coverage and completion commit in one transaction. A failure
 records its stage and reason. If the failure cannot be written, the server log
-reports it. There is no queue or process recovery. Unfinished runs whose last
-stage change is over five minutes old are marked stale. A local clock updates
+reports it. There is no queue or automatic restart. Unfinished runs whose last
+recorded activity is over five minutes old are marked stale. A local clock updates
 that label without making database requests.
 
 ### Realtime

@@ -50,10 +50,13 @@ export type Database = {
       explanations: Table<FileRow & { body: string }>;
       file_roles: Table<FileRow & { role: string }>;
       insights: Table<AnalysisRow & { body: string }>;
+      ai_cache: Table<{ organization_id: string; cache_key: string; model: string;
+        kind: "file" | "folder" | "role"; body: string; created_at: string }>;
     };
     Views: Record<string, never>;
     Functions: {
-      begin_analysis: { Args: { p_repository_url: string }; Returns: { analysis_id: string; created: boolean }[] };
+      heartbeat_analysis: { Args: { p_analysis_id: string }; Returns: undefined };
+      begin_analysis: { Args: { p_repository_url: string; p_reanalyse?: boolean }; Returns: { analysis_id: string; created: boolean }[] };
       advance_analysis: { Args: { p_analysis_id: string; p_expected_stage: PipelineStage;
         p_stage: PipelineStage; p_message: string; p_commit_sha?: string }; Returns: undefined };
       fail_analysis: { Args: { p_analysis_id: string; p_stage: PipelineStage; p_message: string }; Returns: undefined };

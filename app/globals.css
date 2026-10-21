@@ -296,3 +296,11 @@ select, input { border: 1px solid var(--border); border-radius: 3px; background:
 .route-table code { white-space: nowrap; overflow-wrap: normal; }
 .route-table .detail-path { width: 100%; padding: 3px 4px; }
 .route-table .detail-path[aria-pressed="true"] { background: var(--hover); box-shadow: inset 2px 0 var(--accent); }
+.explanation-prose { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.explanation-prose p { margin: 12px 0; }
+.explanation-prose ul { padding-left: 18px; margin: 10px 0; }
+.explanation-prose li { margin: 5px 0; }
+.explanation-prose code { font-size: 11px; }
+.explanation-path { display: inline; padding: 0; border: 0; background: transparent; color: var(--accent); text-align: left; text-decoration: underline; cursor: pointer; overflow-wrap: anywhere; }
+.explanation-stale { border: 1px solid var(--outgoing); padding: 8px; margin-top: 10px; font-size: 12px; }
+.explanation-stale p { margin: 0 0 8px; }

@@ -37,7 +37,7 @@ export function AnalysisProgress({ initial, organizationId, repository, commit, 
       </li>)}
     </ol>
     <p className="progress-message" role={current.stage === "failed" ? "alert" : "status"}>{current.message}</p>
-    {stale && <p className="progress-notice" role="status">Stale run. No stage change for over five minutes. The process may have stopped.</p>}
+    {stale && <p className="progress-notice" role="status">Stale run. No activity for over five minutes. The process may have stopped.</p>}
     {connectionError && <p className="progress-notice" role="alert">{connectionError}</p>}
     {commit && <p className="muted">Commit <code>{commit}</code></p>}
     {counts && current.stage === "completed" && <p className="muted">{counts.files} files parsed · {counts.skipped} skipped</p>}

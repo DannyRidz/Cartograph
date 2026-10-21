@@ -29,6 +29,8 @@ function archive(entries: { name: string; body?: string; type?: string; target?:
 }
 
 async function main() {
+  process.env.OPENAI_API_KEY = "verification-only-key";
+  process.env.LANGSMITH_TRACING = "false";
   const root = await mkdtemp(path.join(tmpdir(), "cartograph-pipeline-check-"));
   const originalFetch = globalThis.fetch;
   const sha = "a".repeat(40);
@@ -48,6 +50,9 @@ async function main() {
   let networkMode: "ok" | "missing" | "bad-archive" | "bad-config" = "ok";
   globalThis.fetch = async (input) => {
     const url = String(input);
+    if (url.includes("api.openai.com")) return Response.json({ id: "verification-completion", object: "chat.completion", created: 0,
+      model: "gpt-4.1-mini-2025-04-14", choices: [{ index: 0, message: { role: "assistant", content: '{"role":"util"}' }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 } });
     if (networkMode === "missing") return new Response(null, { status: 404 });
     if (url.endsWith("/commits/HEAD")) return Response.json({ sha });
     downloadUrl = url;
@@ -73,6 +78,10 @@ async function main() {
     const database = createClient<Database>("https://database.invalid", "publishable-verification-key", {
       accessToken: async () => "verification-session",
       global: { fetch: async (input, init) => {
+        if (String(input).includes("/ai_cache")) {
+          if (init?.method === "POST") return new Response(null, { status: 201 });
+          return Response.json(null);
+        }
         const name = String(input).split("/").at(-1) ?? "";
         const args: unknown = JSON.parse(String(init?.body));
         assert(args && typeof args === "object" && !Array.isArray(args));
@@ -86,11 +95,12 @@ async function main() {
     calls.length = 0;
     const completed = await runAnalysis(database, "verification-id", repository);
     assert.equal(completed.state, "completed");
-    assert.deepEqual(calls.map((call) => call.name), ["advance_analysis", "advance_analysis", "advance_analysis", "store_analysis"]);
+    assert.deepEqual(calls.map((call) => call.name), ["heartbeat_analysis", "advance_analysis", "advance_analysis", "advance_analysis", "store_analysis"]);
     assert.deepEqual(calls.filter((call) => call.name === "advance_analysis").map((call) => call.args.p_stage), ["select", "parse", "store"]);
     const stored = calls.at(-1)?.args.p_result;
     validateRepositoryResult(stored);
     assert.equal(stored.files.length, 2);
+    assert(stored.files.every((file) => file.role === "util"));
     assert.equal(stored.edges.length, 3);
     assert.equal(stored.coverage.filesSkipped, 3);
     assert.equal(stored.coverage.totals.resolved, 3);
