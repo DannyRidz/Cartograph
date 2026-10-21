@@ -15,8 +15,9 @@ export async function classifyFiles(database: SupabaseClient<Database>, root: st
   const contexts = candidates.map((file) => fileContext(repository, file));
   const labels = new Map<string, string>();
   let next = 0;
+  let failed = false;
   async function worker() {
-    while (next < contexts.length) {
+    while (!failed && next < contexts.length) {
       const context = contexts[next++];
       const source = await readFile(path.join(root, context.file.path), "utf8");
       if (contentHash(source) !== context.file.hash) throw new Error("File content changed before classification.");
@@ -39,7 +40,8 @@ export async function classifyFiles(database: SupabaseClient<Database>, root: st
     }
   }
   // Wait for every worker before temporary source files can be removed on failure.
-  const results = await Promise.allSettled(Array.from({ length: Math.min(4, candidates.length) }, worker));
+  const results = await Promise.allSettled(Array.from({ length: Math.min(4, candidates.length) },
+    () => worker().catch((error: unknown) => { failed = true; throw error; })));
   await flushTraces();
   for (const result of results) if (result.status === "rejected") throw result.reason;
   return { ...repository, files: repository.files.map((file) => labels.has(file.path) ? { ...file, role: labels.get(file.path) } : file) };

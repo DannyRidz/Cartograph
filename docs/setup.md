@@ -88,6 +88,9 @@ The migration adds an organization scoped AI cache with SELECT and INSERT polici
 and permits explicit re-analysis while preserving completed maps. Ordinary URL
 submissions still open the most recent analysis. Concurrent fresh requests share
 the active run. All application access uses the publishable key and Clerk token.
+Active runs are reused regardless of age. If a process dies before recording a
+final state, Re-analyse will keep returning that stale run. Automatic replacement
+is deferred until run expiry can distinguish abandoned work from a long analysis.
 
 Set `OPENAI_API_KEY` in `.env.local`. New analyses label files unmatched by an
 adapter during the parse stage. Existing maps keep their original roles until
@@ -123,14 +126,26 @@ import and dependent. Folder explanations receive every folded member's source
 and metadata, plus resolved internal and boundary edges. No graph traversal is
 delegated to the model. Requests beyond 600,000 characters fail explicitly rather
 than silently dropping context. Individual role classification accepts up to
-200,000 source characters. Source downloads have a 2 MB limit per file.
+200,000 source characters. A repository containing an unmatched file above that
+limit cannot complete analysis: the failed run names the file and limit. No
+classification is silently skipped. After any classification failure, workers
+stop taking new files while requests already in progress finish. Source
+downloads have a 2 MB limit per file.
 
 Each Explain request checks GitHub HEAD and each explained member's SHA-256 hash.
 Stale responses describe the analysed commit and offer Re-analyse. A failed GitHub
 check fails visibly. The pane retains fetched responses across selections and tabs;
 Explain can be clicked again to check staleness and exercise the traced cache.
 
-Run `pnpm verify:ai`, `pnpm verify:explanation-prose` and `pnpm verify:pipeline` for terminal checks with mocked
+GitHub HEAD checks use the public API on every Explain request, including cache
+hits. You can optionally set `GITHUB_TOKEN` in `.env.local` to use an authenticated
+rate limit. Use a token with minimal access appropriate to public repositories.
+It is sent only to `api.github.com`, never to raw source downloads or the browser.
+Without it, the server shares GitHub's unauthenticated rate limit. HEAD is not
+memoized, so a reload does not hide a newly pushed commit behind a time window.
+
+Run `pnpm verify:ai`, `pnpm verify:ai-review`, `pnpm verify:explanation-prose`
+and `pnpm verify:pipeline` for terminal checks with mocked
 network responses and no model spend. Run
 `psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/verify-ai.sql`
 to verify tenant isolation, cache grants and fresh-run

@@ -16,6 +16,7 @@
     "verify:stored-map": "node --experimental-strip-types scripts/verify-stored-map.ts",
     "verify:pipeline": "node --experimental-strip-types scripts/verify-pipeline.ts",
     "verify:ai": "node --experimental-strip-types scripts/verify-ai.ts",
+    "verify:ai-review": "node --experimental-strip-types scripts/verify-ai-review.ts",
     "verify:explanation-prose": "node --experimental-strip-types scripts/verify-explanation-prose.ts",
     "verify:adapters": "node --experimental-strip-types scripts/verify-adapters.ts",
     "verify:parser": "node --experimental-strip-types scripts/verify-parser.ts",

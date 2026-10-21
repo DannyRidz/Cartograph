@@ -25,7 +25,7 @@ export function ExplanationPane({ context, target, kind, select }: {
     try {
       const response = await fetch("/api/explanations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ analysisId: context.analysisId, target, kind }) });
       if (!response.ok) {
-        const error: unknown = await response.json();
+        const error: unknown = await response.json().catch(() => null);
         throw new Error(error && typeof error === "object" && "message" in error && typeof error.message === "string" ? error.message : "Could not explain this selection.");
       }
       const result: Explanation = await response.json();
@@ -40,7 +40,7 @@ export function ExplanationPane({ context, target, kind, select }: {
     setAnalysisError(undefined);
     try {
       const response = await fetch("/api/analyses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ repositoryUrl: context.repositoryUrl, reanalyse: true }) });
-      const value: unknown = await response.json();
+      const value: unknown = await response.json().catch(() => null);
       if (!response.ok || !value || typeof value !== "object" || !("id" in value) || typeof value.id !== "string") throw new Error("Could not start a fresh analysis.");
       router.push(`/workspace/analyses/${value.id}`);
     } catch (error: unknown) {

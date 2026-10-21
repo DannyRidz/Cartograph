@@ -89,19 +89,22 @@ function ModulePanel({ data }: NodeProps<ModuleNode>) {
 }
 const nodeTypes = { module: ModulePanel };
 
-function Refit({ revision, focus }: { revision: string; focus?: string }) {
+function Refit({ revision, focusRequest }: { revision: string; focusRequest: { owner: string; serial: number } | null }) {
   const initialized = useNodesInitialized();
   const { fitView, getZoom, viewportInitialized } = useReactFlow();
   const fitted = useRef<string | null>(null);
+  const focused = useRef(0);
   useEffect(() => {
     if (!initialized || !viewportInitialized || fitted.current === revision) return;
     // Wait for the expanded nodes and their row handles to reach the store.
     const frame = requestAnimationFrame(() => {
       fitted.current = revision;
+      const focus = focusRequest && focused.current !== focusRequest.serial ? focusRequest.owner : undefined;
+      focused.current = focusRequest?.serial ?? 0;
       void fitView({ ...(focus ? { nodes: [{ id: focus }] } : {}), padding: 0.04, minZoom: 0.05, maxZoom: focus ? 1 : Math.min(1, getZoom()), duration: 0 });
     });
     return () => cancelAnimationFrame(frame);
-  }, [initialized, viewportInitialized, revision, focus, fitView, getZoom]);
+  }, [initialized, viewportInitialized, revision, focusRequest, fitView, getZoom]);
   return null;
 }
 
@@ -119,6 +122,7 @@ function Canvas({ repository, name, explanation }: { repository: RepositoryResul
   const [hovered, setHovered] = useState<string | null>(null);
   const highlighted = new Set(hovered === null ? [] : folded.modules.find((module) => module.id === hovered)?.files.map((file) => file.path) ?? [hovered]);
   const [selected, setSelected] = useState<string | null>(null);
+  const [focusRequest, setFocusRequest] = useState<{ owner: string; serial: number } | null>(null);
   const toggle = (id: string) => {
     setSelected(id);
     setOffsets((current) => new Map(current).set(id, 0));
@@ -136,6 +140,7 @@ function Canvas({ repository, name, explanation }: { repository: RepositoryResul
     const index = folder?.files.findIndex((file) => file.path === path) ?? -1;
     if (index < 0) throw new Error(`Missing canvas file: ${path}`);
     setSelected(path);
+    setFocusRequest((current) => ({ owner, serial: (current?.serial ?? 0) + 1 }));
     setHovered(null);
     setOpened((current) => current.has(owner) ? current : new Set(current).add(owner));
     setOffsets((current) => new Map(current).set(owner, index * ROW_HEIGHT));
@@ -176,7 +181,7 @@ function Canvas({ repository, name, explanation }: { repository: RepositoryResul
   }));
   return <CanvasShell details={<RepositoryDetails explanation={explanation} name={name} repository={repository} details={details} folder={folded.modules.find((module) => module.id === selected)} selected={selected} highlighted={highlighted} select={selectFromDetails} hover={setHovered} graph={graph} insights={insights} />} rail={<><h2 id="categories-heading" className="panel-heading">File categories</h2><ul className="file-categories">{categories.map(({ role, label, count }) => <li key={role}><button aria-pressed={category === role} onClick={() => setCategory((current) => current === role ? null : role)}><span>{label}</span><span>{count}</span></button></li>)}</ul><p className="canvas-coverage">{repository.coverage.filesParsed} parsed<br />{repository.coverage.filesSkipped} skipped<br />{repository.coverage.totals.unresolved} unresolved imports</p></>}>
     <div className="canvas-toolbar"><span>{folded.modules.length} folders</span><span>Height = incoming dependencies</span><button onClick={() => setSelected(null)} disabled={selected === null}>Clear selection</button></div>
-    <div className="canvas-flow canvas-flow-with-routes"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.04, maxZoom: 1 }} nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} minZoom={0.05} maxZoom={2} onPaneClick={() => setSelected(null)}><Refit revision={JSON.stringify([[...opened].sort(), selected])} focus={selected ? folded.owner.get(selected) ?? selected : undefined} /><Controls showInteractive={false} /></ReactFlow></div>
+    <div className="canvas-flow canvas-flow-with-routes"><ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} fitView fitViewOptions={{ padding: 0.04, maxZoom: 1 }} nodesDraggable={false} nodesConnectable={false} elementsSelectable={false} minZoom={0.05} maxZoom={2} onPaneClick={() => setSelected(null)}><Refit revision={JSON.stringify([[...opened].sort(), focusRequest?.serial ?? 0])} focusRequest={focusRequest} /><Controls showInteractive={false} /></ReactFlow></div>
     <RepositoryRoutes routes={repository.routes ?? []} selected={selected} select={selectFromDetails} hover={setHovered} />
   </CanvasShell>;
 }

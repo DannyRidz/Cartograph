@@ -1,8 +1,10 @@
 import type { PublicRepository } from "../pipeline/repository.ts";
 
 export async function repositoryHead(repository: PublicRepository) {
+  const token = process.env.GITHUB_TOKEN?.trim();
   const response = await fetch(`https://api.github.com/repos/${repository.owner}/${repository.name}/commits/HEAD`, {
-    headers: { Accept: "application/vnd.github+json", "User-Agent": "Cartograph" }, cache: "no-store", signal: AbortSignal.timeout(20_000),
+    headers: { Accept: "application/vnd.github+json", "User-Agent": "Cartograph", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    cache: "no-store", signal: AbortSignal.timeout(20_000),
   });
   if (!response.ok) throw new Error(`Could not check the current repository commit (GitHub HTTP ${response.status}).`);
   const value: unknown = await response.json();
