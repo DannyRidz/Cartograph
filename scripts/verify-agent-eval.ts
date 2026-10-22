@@ -13,6 +13,11 @@ function broken(change: (value: AgentEvaluationEvidence) => void, check: string)
 }
 broken((value) => { value.cases[0].tools = []; }, 'looked_up');
 broken((value) => { value.cases[0].answer = 'Probably handled in src/auth.ts'; }, 'no_lookup_avoidance');
+broken((value) => { value.cases[0].answer = 'I can’t look up the repository.'; }, 'no_lookup_avoidance');
+const curly = structuredClone(base);
+curly.cases[1].answer = 'I can’t prove breakage from imports.';
+curly.cases[2].answer = 'I can’t judge this code. I can show routes and files.';
+assert.ok(evaluateAgent(curly).every((item) => item.passed));
 broken((value) => { value.cases[3].answer = 'I call the search_files tool with a bearer token.'; }, 'no_plumbing');
 broken((value) => { value.cases[0].paths = ['invented.ts']; }, 'recorded_file_paths');
 broken((value) => { value.cases[0].answer += ' See missing.ts'; }, 'recorded_file_paths');

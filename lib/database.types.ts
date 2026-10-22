@@ -56,6 +56,7 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      agent_credential_time: { Args: Record<string, never>; Returns: string };
       heartbeat_analysis: { Args: { p_analysis_id: string }; Returns: undefined };
       begin_analysis: { Args: { p_repository_url: string; p_reanalyse?: boolean }; Returns: { analysis_id: string; created: boolean }[] };
       advance_analysis: { Args: { p_analysis_id: string; p_expected_stage: PipelineStage;

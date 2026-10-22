@@ -3,7 +3,7 @@
   "commit": "a4b3f5ff4bafdcca6ebca94fd82731af6a637e39",
   "model": "gpt-5.5",
   "judge": "deterministic checks plus transcript inspection",
-  "checkedAt": "2026-10-22T04:37:01.835Z",
+  "checkedAt": "2026-10-22T05:19:59.680Z",
   "passed": true,
   "cases": [
     {

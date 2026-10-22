@@ -69,6 +69,19 @@ assert.deepEqual(choices, ['required', 'auto', 'required', 'auto']);
 const noLookup = createAgent({ model: new FakeToolCallingModel(), tools: [...createRepositoryTools(repository)], middleware: [lookupOnly([...names])] });
 await assert.rejects(noLookup.invoke({ messages: [{ role: 'user', content: 'Judge the code.' }] }), /without a repository lookup/);
 console.log('Lookup required on both turns; only six tools exposed; an answer without a lookup fails loudly.');
+const { HumanMessage, AIMessage, ToolMessage } = await import('@langchain/core/messages');
+const failedChoices: (string | undefined)[] = [];
+const failedProbe = createMiddleware({ name: 'VerifyFailedLookup', wrapModelCall: (request, handler) => {
+  failedChoices.push(typeof request.toolChoice === 'string' ? request.toolChoice : undefined);
+  return handler(request);
+} });
+const afterFailedLookup = createAgent({ model: new FakeToolCallingModel(), tools: [...createRepositoryTools(repository)], middleware: [lookupOnly([...names]), failedProbe] });
+await assert.rejects(afterFailedLookup.invoke({ messages: [
+  new HumanMessage('Read the summary'),
+  new AIMessage({ content: '', tool_calls: [{ name: 'analysis_summary', args: {}, id: 'failed' }] }),
+  new ToolMessage({ content: 'Lookup failed', name: 'analysis_summary', tool_call_id: 'failed', status: 'error' }),
+] }), /without a repository lookup/);
+assert.deepEqual(failedChoices, ['required']);
 
 // Service lookups use private runtime context and publish tool events around HTTP.
 const { createHttpTools, contextSchema } = await import('../tools/http.ts');

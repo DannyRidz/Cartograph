@@ -543,8 +543,11 @@ signing key or the database owner connection. The existing Clerk session client
 is used only to prove ownership and register a grant during issuance.
 
 Apply `20261022035500_agent_tool_grants.sql` with `supabase db push` using the
-existing database setup procedure. This migration has been applied to the
-configured project. It adds the grant registry and read policies for analyses,
+existing database setup procedure. Also apply `20261022051533_agent_credential_clock.sql`
+before starting this version: credential issuance reads database time through an
+authenticated, security invoker function, then binds the grant's creation and
+expiry to the signed claims. Both database lifetime limits remain five minutes.
+The original migration adds the grant registry and read policies for analyses,
 files, edges, file roles and routes. Other tables remain inaccessible to the
 agent. The private `cartograph_internal.agent_tool_scope()` helper can read the
 registry with elevated permissions, but never reads graph tables. Those tables

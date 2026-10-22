@@ -64,3 +64,25 @@ preceding slice, with its temporary grant and conversation cleaned up.
 
 The app and agent were left running. Browser verification did not install a
 driver or test runner. No phase beyond 12 was built.
+
+## PR 9 review fixes
+
+The four CodeRabbit findings were reproduced and corrected on 2026-10-22.
+Ask reads at most 16 KiB before decoding, cancels oversized bodies, and limits
+body read time to ten seconds. A lookup must complete before the relay can emit
+answer text; failed tool messages also keep the model's lookup requirement in
+place. Evaluation checks normalize curly apostrophes. Credential registration
+reads database time and binds the grant's creation and expiry to the signed
+claims, keeping both existing five minute database limits.
+
+Regression checks cover missing and misleading Content-Length, byte limits with
+split UTF-8, body timeout and cancellation, pending and failed lookups, curly
+apostrophes, clock offsets in either direction, and clock or registration errors.
+The original database timing failure was reproduced with a two second offset.
+The corrective clock migration is applied to the configured project, and the
+database checks confirm its privileges, grant lifetime and tenant isolation.
+All six live HTTP checks, app and agent types, lint, both production builds,
+tool checks and all four saved evaluation cases pass. The first builds hit
+sandbox restrictions; the app also retained a failed generated Turbopack cache.
+Moving that cache aside and building with process and port access passed, with
+the same existing parser tracing warning. No additional model call was needed.

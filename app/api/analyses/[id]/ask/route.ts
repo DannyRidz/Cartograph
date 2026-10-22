@@ -7,6 +7,7 @@ import { issueAgentCredential } from '@/lib/agent/issue';
 import { allowAgentRequest } from '@/lib/agent/rate-limit';
 import { conversationOwner, openAgentStream } from '@/lib/agent/runtime';
 import { relayAgentStream } from '@/lib/agent/stream';
+import { readLimitedText } from '@/lib/agent/request';
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const headers = { 'Cache-Control': 'no-store' };
@@ -18,9 +19,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   if (!allowAgentRequest(`ask:${session.userId}:${session.orgId}`, 20)) return Response.json({ message: 'Too many questions. Try again in a minute.' }, { status: 429, headers });
   let input: { question: string; threadId?: string; selected: string | null };
   try {
-    if (Number(request.headers.get('content-length') ?? 0) > 16384) throw new Error();
-    const text = await request.text();
-    if (text.length > 16384) throw new Error();
+    const text = await readLimitedText(request);
     const body: unknown = JSON.parse(text);
     if (!body || typeof body !== 'object' || !('question' in body) || typeof body.question !== 'string'
       || !body.question.trim() || body.question.length > 4000) throw new Error();

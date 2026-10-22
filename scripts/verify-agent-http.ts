@@ -31,13 +31,15 @@ function sql(statement: string) {
 const candidate: unknown = JSON.parse(sql("select json_build_object('id', id, 'organizationId', organization_id) from public.analyses where state = 'completed' and not is_seed order by created_at desc limit 1"));
 if (!candidate || typeof candidate !== 'object' || !('id' in candidate) || typeof candidate.id !== 'string'
   || !('organizationId' in candidate) || typeof candidate.organizationId !== 'string') throw new Error('A real completed analysis is required.');
-const signed = signCredential(candidate.id, candidate.organizationId, secret);
+const databaseTime = Date.parse(sql("set role authenticated; select public.agent_credential_time()"));
+assert.ok(Number.isFinite(databaseTime), 'The database clock must be readable');
+const signed = signCredential(candidate.id, candidate.organizationId, secret, databaseTime);
 const hash = credentialHash(signed.token);
 const expiresAt = new Date(signed.claims.expiresAt * 1000).toISOString();
 // signCredential validates both scope strings; hash and ISO expiry are server generated.
 sql(`begin; set local role authenticated; set local request.jwt.claims = '{"role":"authenticated","o":{"id":"${signed.claims.organizationId}"}}';
- insert into public.agent_tool_grants(token_hash, organization_id, analysis_id, expires_at)
- values('${hash}','${signed.claims.organizationId}','${signed.claims.analysisId}','${expiresAt}'); commit;`);
+ insert into public.agent_tool_grants(token_hash, organization_id, analysis_id, created_at, expires_at)
+ values('${hash}','${signed.claims.organizationId}','${signed.claims.analysisId}','${new Date(signed.claims.issuedAt * 1000).toISOString()}','${expiresAt}'); commit;`);
 async function request(tool: string, params = '', token: string | null = signed.token, method = 'GET') {
   return fetch(new URL(`/api/agent/tools/${tool}${params ? `?${params}` : ''}`, base), {
     method, headers: token === null ? {} : { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(30_000),

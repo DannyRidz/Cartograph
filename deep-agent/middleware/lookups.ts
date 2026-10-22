@@ -1,4 +1,5 @@
 import { createMiddleware } from 'langchain';
+import { isToolMessage } from '@langchain/core/messages';
 
 export function lookupOnly(names: string[]) {
   const allowed = new Set(names);
@@ -7,13 +8,13 @@ export function lookupOnly(names: string[]) {
     wrapModelCall: async (request, handler) => {
       const messages = request.messages;
       const lastUser = messages.findLastIndex((message) => message.type === 'human');
-      const lookedUp = messages.slice(lastUser + 1).some((message) =>
-        message.type === 'tool' && message.name !== undefined && allowed.has(message.name));
+      const completedLookup = messages.slice(lastUser + 1).some((message) =>
+        isToolMessage(message) && message.status !== 'error' && message.name !== undefined && allowed.has(message.name));
       const response = await handler({ ...request,
         tools: request.tools.filter((tool) => 'name' in tool && typeof tool.name === 'string' && allowed.has(tool.name)),
-        toolChoice: lookedUp ? 'auto' : 'required',
+        toolChoice: completedLookup ? 'auto' : 'required',
       });
-      if (!lookedUp && !response.tool_calls?.length) {
+      if (!completedLookup && !response.tool_calls?.length) {
         throw new Error('The model returned an answer without a repository lookup.');
       }
       return response;

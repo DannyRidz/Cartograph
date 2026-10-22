@@ -21,6 +21,20 @@ end $$;
 
 set local role authenticated;
 select set_config('request.jwt.claims', '{"role":"authenticated","o":{"id":"org_AgentToolsVerifyA"}}', true);
+do $$
+declare issued_at timestamptz := date_trunc('second', public.agent_credential_time());
+begin
+  if abs(extract(epoch from (issued_at - statement_timestamp()))) >= 1 then
+    raise exception 'Credential clock differs from the policy clock';
+  end if;
+  if has_function_privilege('anon', 'public.agent_credential_time()', 'execute')
+    or has_function_privilege('service_role', 'public.agent_credential_time()', 'execute') then
+    raise exception 'Credential clock has unnecessary execute grants';
+  end if;
+  insert into public.agent_tool_grants(token_hash, organization_id, analysis_id, created_at, expires_at)
+    values(repeat('a',64), 'org_AgentToolsVerifyA', current_setting('agent_verify.analysis_1')::uuid,
+      issued_at, issued_at + interval '5 minutes');
+end $$;
 insert into public.agent_tool_grants(token_hash, organization_id, analysis_id, expires_at)
  values(encode(sha256(convert_to('agent-verification-bearer', 'UTF8')), 'hex'), 'org_AgentToolsVerifyA',
  current_setting('agent_verify.analysis_1')::uuid, statement_timestamp() + interval '4 minutes');

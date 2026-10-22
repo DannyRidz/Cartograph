@@ -2,8 +2,31 @@ import assert from 'node:assert/strict';
 import { readSse, encodeSse } from '../lib/agent/sse.ts';
 import { relayAgentStream, parseAskEvent } from '../lib/agent/stream.ts';
 import { conversationOwner, openAgentStream } from '../lib/agent/runtime.ts';
+import { readLimitedText } from '../lib/agent/request.ts';
 
 const encoder = new TextEncoder();
+function bodyRequest(body: ReadableStream<Uint8Array>, headers?: HeadersInit, signal?: AbortSignal) {
+  const init: RequestInit & { duplex: 'half' } = { method: 'POST', body, headers, signal, duplex: 'half' };
+  return new Request('http://localhost', init);
+}
+const exactBody = encoder.encode('é'.repeat(8192));
+assert.equal((await readLimitedText(bodyRequest(new ReadableStream({ start(controller) {
+  controller.enqueue(exactBody.slice(0, 1)); controller.enqueue(exactBody.slice(1)); controller.close();
+} })))).length, 8192, 'Accept exactly 16 KiB and split UTF-8');
+for (const headers of [undefined, { 'content-length': '1' }]) {
+  let cancelled = false;
+  const oversized = new ReadableStream<Uint8Array>({ start(controller) {
+    controller.enqueue(exactBody); controller.enqueue(encoder.encode('é'));
+  }, cancel() { cancelled = true; } });
+  await assert.rejects(readLimitedText(bodyRequest(oversized, headers)), /too large/);
+  assert.equal(cancelled, true, 'Cancel oversized bodies without depending on Content-Length');
+}
+let timedOut = false;
+await assert.rejects(readLimitedText(bodyRequest(new ReadableStream({ cancel() { timedOut = true; } })), 16384, 10), /interrupted/);
+assert.equal(timedOut, true);
+const aborted = AbortSignal.abort();
+await assert.rejects(readLimitedText(bodyRequest(new ReadableStream(), undefined, aborted)), /interrupted/);
+assert.equal(await readLimitedText(new Request('http://localhost')), '');
 let inputController: ReadableStreamDefaultController<Uint8Array> | undefined;
 const input = new ReadableStream<Uint8Array>({ start(controller) { inputController = controller; } });
 const output = readSse(relayAgentStream(input, 'thread', () => {}));
@@ -31,6 +54,18 @@ const missingLookup = new ReadableStream<Uint8Array>({ start(controller) { contr
 const rejected = [];
 for await (const item of readSse(relayAgentStream(missingLookup, 'thread', () => {}))) rejected.push(parseAskEvent(JSON.parse(item.data)));
 assert.deepEqual(rejected.map((item) => item.type), ['thread', 'error']);
+for (const status of ['running', 'failed']) {
+  const failedLookup = new ReadableStream<Uint8Array>({ start(controller) {
+    controller.enqueue(encodeSse('custom', { type: 'tool', id: 'failed', name: 'analysis_summary', args: {}, status: 'running' }));
+    if (status === 'failed') controller.enqueue(encodeSse('custom', { type: 'tool', id: 'failed', name: 'analysis_summary', args: {}, status }));
+    controller.enqueue(encodeSse('messages', [{ type: 'ai', content: 'Ungrounded answer' }, {}]));
+    controller.close();
+  } });
+  const events = [];
+  for await (const item of readSse(relayAgentStream(failedLookup, 'thread', () => {}))) events.push(parseAskEvent(JSON.parse(item.data)));
+  assert.equal(events.some((event) => event.type === 'text' || event.type === 'done'), false, `${status} lookups cannot unlock answers`);
+  assert.equal(events.at(-1)?.type, 'error');
+}
 assert.throws(() => parseAskEvent({ type: 'tool', id: 'x', name: 'search_files', args: { credential: 'secret' }, status: 'running' }));
 const calls: { url: URL; body?: Record<string, unknown>; headers: Headers }[] = [];
 function object(value: unknown): value is Record<string, unknown> { return value !== null && typeof value === 'object' && !Array.isArray(value); }

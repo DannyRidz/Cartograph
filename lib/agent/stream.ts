@@ -41,7 +41,7 @@ export function relayAgentStream(body: ReadableStream<Uint8Array>, threadId: str
   return new ReadableStream<Uint8Array>({
     async start(controller) {
       const send = (event: AskEvent) => { if (!stopped) controller.enqueue(encodeSse('ask', event)); };
-      let lookedUp = false;
+      let completedLookup = false;
       let answered = false;
       send({ type: 'thread', threadId });
       try {
@@ -50,14 +50,14 @@ export function relayAgentStream(body: ReadableStream<Uint8Array>, threadId: str
           if (chunk.event === 'custom') {
             const event = parseAskEvent(JSON.parse(chunk.data));
             if (event.type !== 'tool') continue;
-            if (event.status === 'running') lookedUp = true;
+            if (event.status === 'complete') completedLookup = true;
             send(event);
           } else if (chunk.event === 'messages' || chunk.event === 'messages-tuple') {
             const text = messageText(JSON.parse(chunk.data));
-            if (text && lookedUp) { answered = true; send({ type: 'text', text }); }
+            if (text && completedLookup) { answered = true; send({ type: 'text', text }); }
           }
         }
-        if (!lookedUp || !answered) throw new Error('No grounded answer was returned.');
+        if (!completedLookup || !answered) throw new Error('No grounded answer was returned.');
         send({ type: 'done' });
       } catch {
         send({ type: 'error', message: 'The answer was interrupted. Try again or start a new conversation.' });

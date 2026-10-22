@@ -18,14 +18,15 @@ export function evaluateAgent(evidence: AgentEvaluationEvidence) {
   const auth = evidence.cases.find((item) => item.id === 'authentication');
   const priorPaths = new Set(auth?.paths);
   return evidence.cases.map((item) => {
+    const answer = item.answer.replace(/[\u2018\u2019]/g, "'");
     const completed = item.tools.filter((tool) => tool.status === 'complete');
     const checks: Record<string, boolean> = {
       answer_present: Boolean(item.answer.trim()),
       looked_up: completed.length > 0,
       no_failed_or_pending_lookup: item.tools.every((tool) => tool.status === 'complete'),
       recorded_file_paths: item.paths.every((path) => allowed.has(path)) && inventedPaths(item.answer, knownPaths).score === 1,
-      no_plumbing: !plumbing.test(item.answer),
-      no_lookup_avoidance: !avoidance.test(item.answer),
+      no_plumbing: !plumbing.test(answer),
+      no_lookup_avoidance: !avoidance.test(answer),
     };
     if (item.id === 'authentication' || item.id === 'plumbing') {
       checks.relevant_lookup = completed.some((tool) => tool.name === 'search_files' && typeof tool.args.query === 'string' && /auth/i.test(tool.args.query));
@@ -34,11 +35,11 @@ export function evaluateAgent(evidence: AgentEvaluationEvidence) {
     if (item.id === 'followup') {
       checks.incoming_walk = completed.some((tool) => tool.name === 'walk_dependencies' && tool.args.direction === 'incoming'
         && typeof tool.args.path === 'string' && priorPaths.has(tool.args.path));
-      checks.impact_limit_explained = /\b(?:potential|cannot prove|can't prove|not proof|does not prove|not a guarantee|runtime|at risk|may be affected)\b/i.test(item.answer);
+      checks.impact_limit_explained = /\b(?:potential|cannot prove|can't prove|not proof|does not prove|not a guarantee|runtime|at risk|may be affected)\b/i.test(answer);
     }
     if (item.id === 'refusal') {
-      checks.declines_quality = /\b(?:cannot|can't|does not|doesn't|not able|won't)\b/i.test(item.answer) && /\b(?:quality|good|judge|assess|evaluate)\b/i.test(item.answer);
-      checks.offers_supported_questions = /\b(?:imports|dependencies|roles|routes|files)\b/i.test(item.answer);
+      checks.declines_quality = /\b(?:cannot|can't|does not|doesn't|not able|won't)\b/i.test(answer) && /\b(?:quality|good|judge|assess|evaluate)\b/i.test(answer);
+      checks.offers_supported_questions = /\b(?:imports|dependencies|roles|routes|files)\b/i.test(answer);
     }
     return { id: item.id, passed: Object.values(checks).every(Boolean), checks,
       lookupCount: item.tools.length, paths: item.paths, answer: item.answer };
