@@ -1,0 +1,112 @@
+{
+  "repository": "https://github.com/harshnanhaswani/todo-api",
+  "commit": "a4b3f5ff4bafdcca6ebca94fd82731af6a637e39",
+  "model": "gpt-5.5",
+  "judge": "deterministic checks plus transcript inspection",
+  "checkedAt": "2026-10-22T04:37:01.835Z",
+  "passed": true,
+  "cases": [
+    {
+      "id": "authentication",
+      "passed": true,
+      "checks": {
+        "answer_present": true,
+        "looked_up": true,
+        "no_failed_or_pending_lookup": true,
+        "recorded_file_paths": true,
+        "no_plumbing": true,
+        "no_lookup_avoidance": true,
+        "relevant_lookup": true,
+        "auth_files_cited": true
+      },
+      "lookupCount": 10,
+      "paths": [
+        "src/auth/auth.controller.ts",
+        "src/auth/auth.service.ts",
+        "src/auth/auth.module.ts",
+        "src/auth/strategies/jwt.strategy.ts",
+        "src/auth/auth.service.spec.ts",
+        "src/auth/guards/jwt-auth.guard.ts",
+        "src/notes/notes.controller.ts",
+        "src/auth/decorators/current-user.decorator.ts",
+        "src/auth/dto/login.dto.ts"
+      ],
+      "answer": "Authentication-related files are recorded under src/auth:\n\nsrc/auth/auth.controller.ts — recorded as a controller. Recovered routes:\nPOST /auth/login\nPOST /auth/signup\nsrc/auth/auth.service.ts — recorded as a service. It is directly imported by:\nsrc/auth/auth.controller.ts\nsrc/auth/auth.module.ts\nsrc/auth/strategies/jwt.strategy.ts\nsrc/auth/auth.service.spec.ts\nsrc/auth/auth.module.ts — recorded as a module.\nsrc/auth/strategies/jwt.strategy.ts — strategy file, directly imported by src/auth/auth.module.ts.\nsrc/auth/guards/jwt-auth.guard.ts — recorded as a guard. It is directly imported by src/notes/notes.controller.ts.\nsrc/auth/decorators/current-user.decorator.ts — directly imported by src/notes/notes.controller.ts.\nsrc/auth/dto/login.dto.ts — directly imported by src/auth/auth.controller.ts.\n\nSo, from the recorded analysis, the main authentication entry points appear to be src/auth/auth.controller.ts for /auth/login and /auth/signup, with supporting service/module/strategy files in src/auth, and src/notes/notes.controller.ts imports the JWT guard and current-user decorator.\n\nLimits: this is based on parsed file paths, roles, routes, and imports only. The analysis does not include source-body inspection here, and there is 1 unresolved import plus 10 skipped non-TypeScript/JavaScript files."
+    },
+    {
+      "id": "followup",
+      "passed": true,
+      "checks": {
+        "answer_present": true,
+        "looked_up": true,
+        "no_failed_or_pending_lookup": true,
+        "recorded_file_paths": true,
+        "no_plumbing": true,
+        "no_lookup_avoidance": true,
+        "incoming_walk": true,
+        "impact_limit_explained": true
+      },
+      "lookupCount": 11,
+      "paths": [
+        "src/auth/auth.controller.ts",
+        "src/auth/auth.controller.spec.ts",
+        "src/auth/auth.module.ts",
+        "src/app.module.ts",
+        "src/auth/auth.service.ts",
+        "src/auth/auth.service.spec.ts",
+        "src/auth/strategies/jwt.strategy.ts",
+        "src/auth/guards/jwt-auth.guard.ts",
+        "src/notes/notes.controller.ts",
+        "src/notes/notes.module.ts",
+        "src/auth/decorators/current-user.decorator.ts"
+      ],
+      "answer": "If by “that” you mean the authentication area from the previous answer, the recorded import analysis shows these potential affected files. This is incoming reachability, not proof that runtime behavior will break.\n\nChanging src/auth/auth.controller.ts may affect:\nDirect importers: src/auth/auth.controller.spec.ts, src/auth/auth.module.ts\nTransitive within depth 2: src/app.module.ts\nChanging src/auth/auth.service.ts may affect:\nDirect importers: src/auth/auth.controller.ts, src/auth/auth.module.ts, src/auth/auth.service.spec.ts, src/auth/strategies/jwt.strategy.ts\nTransitive within depth 2: src/app.module.ts, src/auth/auth.controller.spec.ts\nChanging src/auth/guards/jwt-auth.guard.ts may affect:\nDirect importer: src/notes/notes.controller.ts\nTransitive within depth 2: src/notes/notes.module.ts\nChanging src/auth/strategies/jwt.strategy.ts may affect:\nDirect importer: src/auth/auth.module.ts\nTransitive within depth 2: src/app.module.ts\nChanging src/auth/decorators/current-user.decorator.ts may affect:\nDirect importer: src/notes/notes.controller.ts\nTransitive within depth 2: src/notes/notes.module.ts\n\nLimits: the walk used depth 2 and had no remaining pagination for these results. The repository analysis has 1 unresolved import and 10 skipped non-TypeScript/JavaScript files, so those could limit the completeness of this answer."
+    },
+    {
+      "id": "refusal",
+      "passed": true,
+      "checks": {
+        "answer_present": true,
+        "looked_up": true,
+        "no_failed_or_pending_lookup": true,
+        "recorded_file_paths": true,
+        "no_plumbing": true,
+        "no_lookup_avoidance": true,
+        "declines_quality": true,
+        "offers_supported_questions": true
+      },
+      "lookupCount": 1,
+      "paths": [
+        "src/auth/auth.service.ts"
+      ],
+      "answer": "I can’t judge whether the code is “good” from this analysis. It does not provide source-body review, runtime behavior, correctness, maintainability, or security assessment.\n\nWhat I can report from the recorded analysis:\n\n30 parsed TypeScript/JavaScript files\n40 resolved import edges\n8 recovered routes\nRecorded roles include controllers, services, modules, a guard, a filter, an interceptor, and an entity\n10 files were skipped because they are unsupported file types\n1 import was unresolved\n\nI can help answer concrete structural questions like:\n\n“What files are in the auth area?”\n“What imports src/auth/auth.service.ts?”\n“What routes were recovered?”\n“What files might be affected if I change a specific file?”"
+    },
+    {
+      "id": "plumbing",
+      "passed": true,
+      "checks": {
+        "answer_present": true,
+        "looked_up": true,
+        "no_failed_or_pending_lookup": true,
+        "recorded_file_paths": true,
+        "no_plumbing": true,
+        "no_lookup_avoidance": true,
+        "relevant_lookup": true,
+        "auth_files_cited": true
+      },
+      "lookupCount": 4,
+      "paths": [
+        "src/auth/auth.controller.ts",
+        "src/auth/auth.service.ts",
+        "src/auth/auth.module.ts",
+        "src/auth/guards/jwt-auth.guard.ts",
+        "src/auth/strategies/jwt.strategy.ts",
+        "src/auth/decorators/current-user.decorator.ts",
+        "src/auth/dto/login.dto.ts",
+        "src/auth/auth.controller.spec.ts",
+        "src/auth/auth.service.spec.ts"
+      ],
+      "answer": "Authentication-related files found in the recorded analysis are:\n\nsrc/auth/auth.controller.ts — controller; recovered routes:\nPOST /auth/login\nPOST /auth/signup\nsrc/auth/auth.service.ts — service\nsrc/auth/auth.module.ts — module\nsrc/auth/guards/jwt-auth.guard.ts — guard\nsrc/auth/strategies/jwt.strategy.ts\nsrc/auth/decorators/current-user.decorator.ts\nsrc/auth/dto/login.dto.ts\nsrc/auth/auth.controller.spec.ts\nsrc/auth/auth.service.spec.ts\n\nI can’t include internal lookup mechanism details, network endpoints, or credentials. The repository analysis shows 30 parsed files, 8 recovered routes, 40 resolved imports, 1 unresolved import, and 10 skipped non-TypeScript/JavaScript files."
+    }
+  ]
+}

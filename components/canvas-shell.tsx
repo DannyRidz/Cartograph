@@ -9,7 +9,7 @@ export function CanvasShell({ children, rail, details }: { children?: ReactNode;
       <main id="workspace" className="canvas-map" aria-label="Dependency map" tabIndex={-1}>
         {children}
       </main>
-      <aside className="canvas-details" aria-label="Repository details">{details}</aside>
+      <aside className="canvas-details" aria-label="Repository overview and questions">{details}</aside>
     </div>
   );
 }

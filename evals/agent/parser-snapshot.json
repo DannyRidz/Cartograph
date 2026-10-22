@@ -1,0 +1,43 @@
+{
+  "repository": "https://github.com/harshnanhaswani/todo-api",
+  "commit": "a4b3f5ff4bafdcca6ebca94fd82731af6a637e39",
+  "files": [
+    "eslint.config.mjs",
+    "src/app.controller.spec.ts",
+    "src/app.controller.ts",
+    "src/app.module.ts",
+    "src/app.service.ts",
+    "src/auth/auth.controller.spec.ts",
+    "src/auth/auth.controller.ts",
+    "src/auth/auth.module.ts",
+    "src/auth/auth.service.spec.ts",
+    "src/auth/auth.service.ts",
+    "src/auth/decorators/current-user.decorator.ts",
+    "src/auth/dto/login.dto.ts",
+    "src/auth/guards/jwt-auth.guard.ts",
+    "src/auth/strategies/jwt.strategy.ts",
+    "src/common/filters/http-exception.filter.ts",
+    "src/common/interceptors/transform.interceptor.ts",
+    "src/main.ts",
+    "src/notes/dto/create-note.dto.ts",
+    "src/notes/dto/update-note.dto.ts",
+    "src/notes/entities/note.entity.ts",
+    "src/notes/notes.controller.ts",
+    "src/notes/notes.module.ts",
+    "src/notes/notes.service.ts",
+    "src/notes/schemas/note.schema.ts",
+    "src/users/dto/create-user.dto.ts",
+    "src/users/schemas/user.schema.ts",
+    "src/users/users.module.ts",
+    "src/users/users.service.spec.ts",
+    "src/users/users.service.ts",
+    "test/app.e2e-spec.ts"
+  ],
+  "routes": [
+    "/",
+    "/auth/login",
+    "/auth/signup",
+    "/notes",
+    "/notes/:id"
+  ]
+}

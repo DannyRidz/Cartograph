@@ -1,12 +1,24 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2023",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "types": ["node"]
+    "types": [
+      "node"
+    ],
+    "noEmit": true,
+    "allowImportingTsExtensions": true
   },
-  "include": ["agent.mts"]
+  "include": [
+    "agent.ts",
+    "identity.ts",
+    "model.ts",
+    "tools/**/*.ts",
+    "middleware/**/*.ts",
+    "scripts/**/*.mts",
+    "shared/**/*.ts"
+  ]
 }

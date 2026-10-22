@@ -19,6 +19,7 @@ type Table<Row, Relationships extends { foreignKeyName: string; columns: string[
 export type Database = {
   public: {
     Tables: {
+      agent_tool_grants: Table<{ token_hash: string; organization_id: string; analysis_id: string; created_at: string; expires_at: string }>;
       organizations: Table<{ id: string; created_at: string }>;
       projects: Table<OwnedRow & { repository_url: string; created_at: string }>;
       analyses: Table<OwnedRow & {

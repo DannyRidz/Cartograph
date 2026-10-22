@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { RepositoryResult } from "@/lib/parser/types";
 import type { FoldedModule } from "@/lib/canvas/folding";
 import type { repositoryDetails } from "@/lib/canvas/details";
@@ -9,6 +9,8 @@ import type { repositoryInsights } from "@/lib/canvas/insights";
 import { taxonomy } from "@/lib/adapters/taxonomy";
 import { RepositoryInsights } from "@/components/repository-insights";
 import { ExplanationPane, type ExplanationContext } from "@/components/explanation-pane";
+
+import { AskPane } from "@/components/ask-pane";
 
 interface DetailsProps {
   explanation?: ExplanationContext;
@@ -26,6 +28,8 @@ interface DetailsProps {
 
 /** Shows repository, folder, or file details with two-level graph walks and shared insights. */
 export function RepositoryDetails({ name, repository, details, folder, selected, highlighted, select, hover, graph, insights, explanation }: DetailsProps) {
+  const [mode, setMode] = useState<"overview" | "ask">("overview");
+  const pathsInRepository = useMemo(() => new Set(repository.files.map((file) => file.path)), [repository]);
   const framework = taxonomy(repository.adapter);
   const routes = repository.routes ?? [];
   const [tab, setTab] = useState<"structure" | "explanation">("structure");
@@ -40,6 +44,18 @@ export function RepositoryDetails({ name, repository, details, folder, selected,
   </section>;
   const kinds = folder ? (["module", "script"] as const).map((kind) => ({ kind, count: folder.files.filter((member) => member.kind === kind).length })).filter(({ count }) => count > 0) : [];
   return <div className="repository-details">
+    <div className="detail-tabs pane-mode-tabs" role="tablist" aria-label="Right pane" onKeyDown={(event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const next = event.key === "Home" ? "overview" : event.key === "End" ? "ask" : mode === "overview" ? "ask" : "overview";
+      setMode(next); document.getElementById(`pane-tab-${next}`)?.focus();
+    }}>
+      {(["overview", "ask"] as const).map((value) => <button key={value} id={`pane-tab-${value}`} role="tab" aria-selected={mode === value} aria-controls={`pane-panel-${value}`} tabIndex={mode === value ? 0 : -1} onClick={() => setMode(value)}>{value === "overview" ? "Overview" : "Ask"}</button>)}
+    </div>
+    <div className="pane-mode-content" id="pane-panel-ask" role="tabpanel" aria-labelledby="pane-tab-ask" hidden={mode !== "ask"}>
+      <AskPane key={explanation?.analysisId ?? "preview"} analysisId={explanation?.analysisId} selected={selected} paths={pathsInRepository} select={select} />
+    </div>
+    <div className="pane-mode-content" id="pane-panel-overview" role="tabpanel" aria-labelledby="pane-tab-overview" hidden={mode !== "overview"}>
     <h2 className="panel-heading">{selected === null ? "Repository" : file ? "File" : "Folder"}</h2>
     <div className="detail-tabs" role="tablist" aria-label="Details" onKeyDown={(event) => {
       if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
@@ -77,5 +93,6 @@ export function RepositoryDetails({ name, repository, details, folder, selected,
       </>}
     </div>
     {tab === "structure" && <RepositoryInsights insights={insights} select={select} hover={hover} />}
+    </div>
   </div>;
 }
