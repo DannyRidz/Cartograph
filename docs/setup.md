@@ -534,3 +534,171 @@ The adapter check uses temporary source fixtures. The database check verifies
 exact stored roles and routes, tenant isolation and rollback of invalid route
 references; its rows are rolled back. Your browser acceptance check remains in
 `docs/specs/phase-08.md`.
+
+## Phase 12 tool HTTP access
+
+The tool service uses the publishable Supabase key with the anonymous database
+role. It does not use the webhook secret client, a Clerk token, a Supabase JWT
+signing key or the database owner connection. The existing Clerk session client
+is used only to prove ownership and register a grant during issuance.
+
+Apply `20261022035500_agent_tool_grants.sql` with `supabase db push` using the
+existing database setup procedure. Also apply `20261022051533_agent_credential_clock.sql`
+before starting this version: credential issuance reads database time through an
+authenticated, security invoker function, then binds the grant's creation and
+expiry to the signed claims. Both database lifetime limits remain five minutes.
+The original migration adds the grant registry and read policies for analyses,
+files, edges, file roles and routes. Other tables remain inaccessible to the
+agent. The private `cartograph_internal.agent_tool_scope()` helper can read the
+registry with elevated permissions, but never reads graph tables. Those tables
+remain protected by RLS, even when a query has no analysis or organization filter.
+
+Set `CARTOGRAPH_AGENT_SIGNING_SECRET` in `.env.local` to a random value of at least
+32 bytes. A dedicated random value has been generated in the local ignored file.
+It belongs only to the app, not `deep-agent/.env`. Restart the app after changing
+it. Rotating it immediately invalidates previously signed credentials at the HTTP
+boundary. The database also requires the exact registered token hash and a future
+expiry. Deleting the analysis cascades to its grants. Expired registry rows grant
+no access and remain until removed or their analysis is deleted.
+
+From a signed in app session, `POST /api/analyses/<id>/agent-credential` with a
+matching `Origin` returns `{ credential, expiresAt }`. No request body is needed.
+The analysis must be visible through the current Clerk organization's RLS and
+must be completed and not a seed. The app signs a credential naming that analysis
+and organization, with a random nonce and a five minute lifetime. Only its SHA-256
+hash and scope are stored. Issuance returns no credential if registration fails.
+Treat the returned credential as a bearer secret; never put it in a URL, model
+message or tool argument.
+
+Call these GET endpoints with `Authorization: Bearer <credential>`. They require
+no signed in Clerk session and return `Cache-Control: no-store`:
+
+| Endpoint under `/api/agent/tools/` | Query parameters |
+| --- | --- |
+| `analysis_summary` | None |
+| `search_files` | `query`, pagination |
+| `files_by_role` | `role`, pagination |
+| `file_neighbours` | `path`, `direction`, pagination |
+| `walk_dependencies` | `path`, `direction`, optional `depth`, pagination |
+| `route_table` | Pagination |
+
+Pagination uses `offset` (default zero) and `limit` (default 50, maximum 100),
+returning `total` and `nextOffset`. Direction is `incoming` or `outgoing`; walk
+depth defaults to two. Unknown or repeated arguments, including analysis or
+organization selectors, return 400. Missing, invalid, expired, unregistered or
+revoked credentials return 401. Tool writes are unsupported (405). Database
+failures return 503, and requests beyond the local process limits return 429.
+There are 20 issuance requests per user and organization per minute, and 120 tool
+reads per credential per minute. These are local process guards, not distributed
+quotas.
+
+Both the agent wrappers and HTTP handlers use `lib/agent/queries.ts`, which calls
+the existing canvas functions. The managed build packages a generated copy of
+that module with its other canonical shared sources. The agent now uses these HTTP endpoints through the authenticated Ask relay
+described below.
+
+```sh
+pnpm verify:agent-tools
+pnpm verify:agent-http
+pnpm typecheck
+pnpm lint
+pnpm build
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/verify-agent-tools.sql
+```
+
+`verify:agent-tools` checks signatures, exact scope, expiry, nonce uniqueness,
+argument validation and local request limits without external services.
+`verify:agent-http` requires the app running at `http://127.0.0.1:3000` (or a local
+HTTP origin supplied as an argument), a real completed analysis, and the existing
+setup credentials in `.env.local`. It registers a temporary grant under the
+analysis's simulated authenticated role, uses the publishable key for reads,
+compares all six HTTP responses with canonical queries, checks credential and
+parameter rejection, then deletes the grant. It never changes analysis data or
+calls a model. Setup credentials remain in the verification process only.
+The SQL check uses temporary graphs in two organizations and rolls everything
+back. It verifies unfiltered reads, isolation between analyses in the same
+organization, cross organization isolation, grant registration restrictions,
+expiry, missing or tampered bearers, revocation and denied writes.
+
+### Ask pane and agent relay
+
+The right pane switches between Overview and Ask. Overview retains its Structure
+and Explanation tabs and selection state. Ask keeps one conversation for the
+current analysis while modes change. No selection is required. Each lookup shows
+its arguments and running, complete or failed status. The answer streams below
+its lookups. Stop cancels the active run; New conversation starts a fresh thread.
+No part of the map or explanation path depends on the agent being reachable.
+
+`POST /api/analyses/<id>/ask` requires the Clerk session and matching `Origin`.
+Its JSON body has `question` (1 to 4,000 characters), optional `threadId`, and
+`selected` (an existing file or folded folder path, or null). The server verifies
+ownership and completion, validates selection against stored parser data, and
+registers a fresh five minute tool credential for every turn. It calls the
+runtime's thread and run APIs; it implements no thread storage or agent server.
+The browser receives only display events, not credentials or runtime metadata.
+An interrupted stream marks any partial answer incomplete.
+
+Set these app server values in `.env.local`:
+
+```dotenv
+CARTOGRAPH_AGENT_URL=http://127.0.0.1:2024
+MDA_INGRESS_SECRET=<random shared secret>
+```
+
+Set these agent service values in `deep-agent/.env`:
+
+```dotenv
+CARTOGRAPH_APP_URL=http://127.0.0.1:3000
+MDA_INGRESS_SECRET=<the same secret>
+```
+
+These local values have been configured. The ingress secret is different from
+the credential signing secret. Neither belongs in a public environment variable.
+The agent uses backend identity: the app asserts a hashed identity containing the
+verified user, organization and analysis. The managed runtime enforces ownership
+when opening an existing thread, so neither another user nor another analysis can
+reuse it. Thread IDs are safe to return to the browser; they confer no authority
+without the app's checks and backend identity. Local Studio remains a development
+surface; do not expose `mda dev` publicly.
+
+Restart the app and `cd deep-agent && pnpm start` after changing server settings.
+Question messages contain only the question and validated selection. The tool
+credential travels in runtime context, which is separate from model messages and
+tool schemas. The six HTTP tools emit custom lifecycle events around each request.
+The relay forwards these and assistant text incrementally, suppressing any answer
+text that arrives before a lookup. It cancels upstream work on disconnect and
+returns a local Ask error if the service is unavailable.
+
+```sh
+pnpm verify:agent-stream
+pnpm --dir deep-agent verify:tools
+```
+
+The stream verification uses local controlled responses. It checks partial SSE
+frames, split UTF-8, tool events arriving before completion, metadata filtering,
+missing lookups, thread reuse and failure handling. The agent tool checks verify
+private context and lookup lifecycle events with a fake model and local HTTP
+responses. They do not call a provider. Browser acceptance and agent evaluation
+remain separate.
+
+References: [Managed Deep Agents backend identity](https://docs.langchain.com/langsmith/javascript/managed-deep-agents-identity),
+[Agent Server streaming API](https://docs.langchain.com/langsmith/agent-server-openapi.json).
+
+### Phase 12 behavior evaluation
+
+```sh
+pnpm verify:agent-eval
+pnpm eval:agent
+```
+
+The agent evaluation replays four real browser turns against an independently
+saved parser snapshot. It checks relevant lookups instead of lookup avoidance,
+contextual incoming walks, quality refusal, file existence and absence of
+internal plumbing disclosures. It uses the existing path detector and no judge
+model. Full evidence and its limits are in `evals/agent/README.md`; results are
+saved in `evals/agent/latest-results.json`.
+
+Browser acceptance was explicitly authorized and run on 2026-10-22, including an
+actual stopped agent process. A stale development stylesheet was found during
+that check. Restarting the local app with a fresh generated development cache
+loaded the current Ask layout; the production styles were already correct.

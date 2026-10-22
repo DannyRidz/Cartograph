@@ -28,7 +28,12 @@
     "verify:adapters": "node --experimental-strip-types scripts/verify-adapters.ts",
     "verify:parser": "node --experimental-strip-types scripts/verify-parser.ts",
     "verify:canvas": "node --experimental-strip-types scripts/verify-canvas.ts lib/fixtures/redux-toolkit.json",
-    "verify:phase-06": "node --experimental-strip-types scripts/verify-phase-06.ts"
+    "verify:phase-06": "node --experimental-strip-types scripts/verify-phase-06.ts",
+    "verify:agent-tools": "node --experimental-strip-types scripts/verify-agent-tools.ts",
+    "verify:agent-http": "node --experimental-strip-types scripts/verify-agent-http.ts",
+    "verify:agent-stream": "node --experimental-strip-types scripts/verify-agent-stream.ts",
+    "eval:agent": "node --experimental-strip-types scripts/eval-agent.ts",
+    "verify:agent-eval": "node --experimental-strip-types scripts/verify-agent-eval.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.12",

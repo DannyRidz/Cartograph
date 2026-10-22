@@ -19,6 +19,7 @@ type Table<Row, Relationships extends { foreignKeyName: string; columns: string[
 export type Database = {
   public: {
     Tables: {
+      agent_tool_grants: Table<{ token_hash: string; organization_id: string; analysis_id: string; created_at: string; expires_at: string }>;
       organizations: Table<{ id: string; created_at: string }>;
       projects: Table<OwnedRow & { repository_url: string; created_at: string }>;
       analyses: Table<OwnedRow & {
@@ -55,6 +56,7 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      agent_credential_time: { Args: Record<string, never>; Returns: string };
       heartbeat_analysis: { Args: { p_analysis_id: string }; Returns: undefined };
       begin_analysis: { Args: { p_repository_url: string; p_reanalyse?: boolean }; Returns: { analysis_id: string; created: boolean }[] };
       advance_analysis: { Args: { p_analysis_id: string; p_expected_stage: PipelineStage;

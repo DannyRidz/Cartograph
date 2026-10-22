@@ -304,3 +304,26 @@ select, input { border: 1px solid var(--border); border-radius: 3px; background:
 .explanation-path { display: inline; padding: 0; border: 0; background: transparent; color: var(--accent); text-align: left; text-decoration: underline; cursor: pointer; overflow-wrap: anywhere; }
 .explanation-stale { border: 1px solid var(--outgoing); padding: 8px; margin-top: 10px; font-size: 12px; }
 .explanation-stale p { margin: 0 0 8px; }
+
+.pane-mode-content { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.pane-mode-content[hidden] { display: none; }
+.pane-mode-tabs { flex: 0 0 auto; }
+.pane-mode-tabs button { font-weight: 600; }
+.ask-pane { display: flex; flex-direction: column; flex: 1; min-height: 0; font-size: 12px; }
+.ask-toolbar { display: flex; align-items: start; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 11px; }
+.ask-toolbar > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ask-toolbar button, .ask-composer button { border: 1px solid var(--border); background: var(--surface); color: var(--foreground); padding: 4px 6px; font-size: 11px; }
+.ask-history { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; scrollbar-width: thin; }
+.ask-turn + .ask-turn { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 16px; }
+.ask-turn h3 { margin: 0 0 6px; font-size: 11px; font-weight: 650; }
+.ask-question { margin: 0 0 8px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.6; }
+.ask-lookups { list-style: none; margin: 10px 0 14px; padding: 0; border: 1px solid var(--border); }
+.ask-lookups li + li { border-top: 1px solid var(--border); }
+.ask-lookups summary { padding: 7px; cursor: pointer; font-size: 11px; }
+.ask-tool-status { float: right; margin-left: 8px; color: var(--muted); }
+.ask-lookups pre { margin: 0; padding: 8px; border-top: 1px solid var(--border); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 10px; }
+.ask-composer { flex: 0 0 auto; padding: 12px; border-top: 1px solid var(--border); }
+.ask-composer label { display: block; margin-bottom: 6px; font-size: 11px; }
+.ask-composer textarea { width: 100%; min-height: 70px; max-height: 180px; resize: vertical; padding: 7px; border: 1px solid var(--border); background: var(--surface); color: var(--foreground); font: inherit; line-height: 1.5; }
+.ask-composer > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.ask-pane button:disabled { opacity: .5; cursor: default; }

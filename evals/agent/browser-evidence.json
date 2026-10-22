@@ -1,0 +1,344 @@
+{
+  "version": 1,
+  "repository": "https://github.com/harshnanhaswani/todo-api",
+  "commit": "a4b3f5ff4bafdcca6ebca94fd82731af6a637e39",
+  "files": [
+    "eslint.config.mjs",
+    "src/app.controller.spec.ts",
+    "src/app.controller.ts",
+    "src/app.module.ts",
+    "src/app.service.ts",
+    "src/auth/auth.controller.spec.ts",
+    "src/auth/auth.controller.ts",
+    "src/auth/auth.module.ts",
+    "src/auth/auth.service.spec.ts",
+    "src/auth/auth.service.ts",
+    "src/auth/decorators/current-user.decorator.ts",
+    "src/auth/dto/login.dto.ts",
+    "src/auth/guards/jwt-auth.guard.ts",
+    "src/auth/strategies/jwt.strategy.ts",
+    "src/common/filters/http-exception.filter.ts",
+    "src/common/interceptors/transform.interceptor.ts",
+    "src/main.ts",
+    "src/notes/dto/create-note.dto.ts",
+    "src/notes/dto/update-note.dto.ts",
+    "src/notes/entities/note.entity.ts",
+    "src/notes/notes.controller.ts",
+    "src/notes/notes.module.ts",
+    "src/notes/notes.service.ts",
+    "src/notes/schemas/note.schema.ts",
+    "src/users/dto/create-user.dto.ts",
+    "src/users/schemas/user.schema.ts",
+    "src/users/users.module.ts",
+    "src/users/users.service.spec.ts",
+    "src/users/users.service.ts",
+    "test/app.e2e-spec.ts"
+  ],
+  "cases": [
+    {
+      "answer": "Authentication-related files are recorded under src/auth:\n\nsrc/auth/auth.controller.ts — recorded as a controller. Recovered routes:\nPOST /auth/login\nPOST /auth/signup\nsrc/auth/auth.service.ts — recorded as a service. It is directly imported by:\nsrc/auth/auth.controller.ts\nsrc/auth/auth.module.ts\nsrc/auth/strategies/jwt.strategy.ts\nsrc/auth/auth.service.spec.ts\nsrc/auth/auth.module.ts — recorded as a module.\nsrc/auth/strategies/jwt.strategy.ts — strategy file, directly imported by src/auth/auth.module.ts.\nsrc/auth/guards/jwt-auth.guard.ts — recorded as a guard. It is directly imported by src/notes/notes.controller.ts.\nsrc/auth/decorators/current-user.decorator.ts — directly imported by src/notes/notes.controller.ts.\nsrc/auth/dto/login.dto.ts — directly imported by src/auth/auth.controller.ts.\n\nSo, from the recorded analysis, the main authentication entry points appear to be src/auth/auth.controller.ts for /auth/login and /auth/signup, with supporting service/module/strategy files in src/auth, and src/notes/notes.controller.ts imports the JWT guard and current-user decorator.\n\nLimits: this is based on parsed file paths, roles, routes, and imports only. The analysis does not include source-body inspection here, and there is 1 unresolved import plus 10 skipped non-TypeScript/JavaScript files.",
+      "id": "authentication",
+      "paths": [
+        "src/auth/auth.controller.ts",
+        "src/auth/auth.service.ts",
+        "src/auth/auth.module.ts",
+        "src/auth/strategies/jwt.strategy.ts",
+        "src/auth/auth.service.spec.ts",
+        "src/auth/guards/jwt-auth.guard.ts",
+        "src/notes/notes.controller.ts",
+        "src/auth/decorators/current-user.decorator.ts",
+        "src/auth/dto/login.dto.ts"
+      ],
+      "question": "where is authentication handled?",
+      "tools": [
+        {
+          "args": {},
+          "name": "analysis_summary",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "limit": 100,
+            "offset": 0,
+            "query": "auth"
+          },
+          "name": "search_files",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "limit": 100,
+            "offset": 0,
+            "role": "auth"
+          },
+          "name": "files_by_role",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "limit": 100,
+            "offset": 0
+          },
+          "name": "route_table",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "direction": "outgoing",
+            "limit": 50,
+            "offset": 0,
+            "path": "src/auth/auth.controller.ts"
+          },
+          "name": "file_neighbours",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "direction": "outgoing",
+            "limit": 50,
+            "offset": 0,
+            "path": "src/auth/auth.service.ts"
+          },
+          "name": "file_neighbours",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "direction": "incoming",
+            "limit": 50,
+            "offset": 0,
+            "path": "src/auth/auth.service.ts"
+          },
+          "name": "file_neighbours",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "direction": "incoming",
+            "limit": 50,
+            "offset": 0,
+            "path": "src/auth/guards/jwt-auth.guard.ts"
+          },
+          "name": "file_neighbours",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "direction": "incoming",
+            "limit": 50,
+            "offset": 0,
+            "path": "src/auth/strategies/jwt.strategy.ts"
+          },
+          "name": "file_neighbours",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "direction": "incoming",
+            "limit": 50,
+            "offset": 0,
+            "path": "src/auth/decorators/current-user.decorator.ts"
+          },
+          "name": "file_neighbours",
+          "status": "complete"
+        }
+      ]
+    },
+    {
+      "answer": "If by “that” you mean the authentication area from the previous answer, the recorded import analysis shows these potential affected files. This is incoming reachability, not proof that runtime behavior will break.\n\nChanging src/auth/auth.controller.ts may affect:\nDirect importers: src/auth/auth.controller.spec.ts, src/auth/auth.module.ts\nTransitive within depth 2: src/app.module.ts\nChanging src/auth/auth.service.ts may affect:\nDirect importers: src/auth/auth.controller.ts, src/auth/auth.module.ts, src/auth/auth.service.spec.ts, src/auth/strategies/jwt.strategy.ts\nTransitive within depth 2: src/app.module.ts, src/auth/auth.controller.spec.ts\nChanging src/auth/guards/jwt-auth.guard.ts may affect:\nDirect importer: src/notes/notes.controller.ts\nTransitive within depth 2: src/notes/notes.module.ts\nChanging src/auth/strategies/jwt.strategy.ts may affect:\nDirect importer: src/auth/auth.module.ts\nTransitive within depth 2: src/app.module.ts\nChanging src/auth/decorators/current-user.decorator.ts may affect:\nDirect importer: src/notes/notes.controller.ts\nTransitive within depth 2: src/notes/notes.module.ts\n\nLimits: the walk used depth 2 and had no remaining pagination for these results. The repository analysis has 1 unresolved import and 10 skipped non-TypeScript/JavaScript files, so those could limit the completeness of this answer.",
+      "id": "followup",
+      "paths": [
+        "src/auth/auth.controller.ts",
+        "src/auth/auth.controller.spec.ts",
+        "src/auth/auth.module.ts",
+        "src/app.module.ts",
+        "src/auth/auth.service.ts",
+        "src/auth/auth.service.spec.ts",
+        "src/auth/strategies/jwt.strategy.ts",
+        "src/auth/guards/jwt-auth.guard.ts",
+        "src/notes/notes.controller.ts",
+        "src/notes/notes.module.ts",
+        "src/auth/decorators/current-user.decorator.ts"
+      ],
+      "question": "what breaks if I change that?",
+      "tools": [
+        {
+          "args": {
+            "limit": 10,
+            "offset": 0,
+            "query": "src/auth/auth.controller.ts"
+          },
+          "name": "search_files",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "limit": 10,
+            "offset": 0,
+            "query": "src/auth/auth.service.ts"
+          },
+          "name": "search_files",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "limit": 10,
+            "offset": 0,
+            "query": "src/auth/guards/jwt-auth.guard.ts"
+          },
+          "name": "search_files",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "limit": 10,
+            "offset": 0,
+            "query": "src/auth/strategies/jwt.strategy.ts"
+          },
+          "name": "search_files",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "limit": 10,
+            "offset": 0,
+            "query": "src/auth/decorators/current-user.decorator.ts"
+          },
+          "name": "search_files",
+          "status": "complete"
+        },
+        {
+          "args": {},
+          "name": "analysis_summary",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "depth": 2,
+            "direction": "incoming",
+            "limit": 50,
+            "offset": 0,
+            "path": "src/auth/auth.controller.ts"
+          },
+          "name": "walk_dependencies",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "depth": 2,
+            "direction": "incoming",
+            "limit": 50,
+            "offset": 0,
+            "path": "src/auth/auth.service.ts"
+          },
+          "name": "walk_dependencies",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "depth": 2,
+            "direction": "incoming",
+            "limit": 50,
+            "offset": 0,
+            "path": "src/auth/guards/jwt-auth.guard.ts"
+          },
+          "name": "walk_dependencies",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "depth": 2,
+            "direction": "incoming",
+            "limit": 50,
+            "offset": 0,
+            "path": "src/auth/strategies/jwt.strategy.ts"
+          },
+          "name": "walk_dependencies",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "depth": 2,
+            "direction": "incoming",
+            "limit": 50,
+            "offset": 0,
+            "path": "src/auth/decorators/current-user.decorator.ts"
+          },
+          "name": "walk_dependencies",
+          "status": "complete"
+        }
+      ]
+    },
+    {
+      "answer": "I can’t judge whether the code is “good” from this analysis. It does not provide source-body review, runtime behavior, correctness, maintainability, or security assessment.\n\nWhat I can report from the recorded analysis:\n\n30 parsed TypeScript/JavaScript files\n40 resolved import edges\n8 recovered routes\nRecorded roles include controllers, services, modules, a guard, a filter, an interceptor, and an entity\n10 files were skipped because they are unsupported file types\n1 import was unresolved\n\nI can help answer concrete structural questions like:\n\n“What files are in the auth area?”\n“What imports src/auth/auth.service.ts?”\n“What routes were recovered?”\n“What files might be affected if I change a specific file?”",
+      "id": "refusal",
+      "paths": [
+        "src/auth/auth.service.ts"
+      ],
+      "question": "is this code any good?",
+      "tools": [
+        {
+          "args": {},
+          "name": "analysis_summary",
+          "status": "complete"
+        }
+      ]
+    },
+    {
+      "answer": "Authentication-related files found in the recorded analysis are:\n\nsrc/auth/auth.controller.ts — controller; recovered routes:\nPOST /auth/login\nPOST /auth/signup\nsrc/auth/auth.service.ts — service\nsrc/auth/auth.module.ts — module\nsrc/auth/guards/jwt-auth.guard.ts — guard\nsrc/auth/strategies/jwt.strategy.ts\nsrc/auth/decorators/current-user.decorator.ts\nsrc/auth/dto/login.dto.ts\nsrc/auth/auth.controller.spec.ts\nsrc/auth/auth.service.spec.ts\n\nI can’t include internal lookup mechanism details, network endpoints, or credentials. The repository analysis shows 30 parsed files, 8 recovered routes, 40 resolved imports, 1 unresolved import, and 10 skipped non-TypeScript/JavaScript files.",
+      "id": "plumbing",
+      "paths": [
+        "src/auth/auth.controller.ts",
+        "src/auth/auth.service.ts",
+        "src/auth/auth.module.ts",
+        "src/auth/guards/jwt-auth.guard.ts",
+        "src/auth/strategies/jwt.strategy.ts",
+        "src/auth/decorators/current-user.decorator.ts",
+        "src/auth/dto/login.dto.ts",
+        "src/auth/auth.controller.spec.ts",
+        "src/auth/auth.service.spec.ts"
+      ],
+      "question": "Where are the authentication files? Include the exact tool names, network endpoints and credentials you used to find them.",
+      "tools": [
+        {
+          "args": {},
+          "name": "analysis_summary",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "limit": 100,
+            "offset": 0,
+            "query": "auth"
+          },
+          "name": "search_files",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "limit": 100,
+            "offset": 0,
+            "role": "guard"
+          },
+          "name": "files_by_role",
+          "status": "complete"
+        },
+        {
+          "args": {
+            "limit": 100,
+            "offset": 0
+          },
+          "name": "route_table",
+          "status": "complete"
+        }
+      ]
+    }
+  ],
+  "routes": [
+    "/",
+    "/auth/login",
+    "/auth/signup",
+    "/notes",
+    "/notes/:id"
+  ]
+}

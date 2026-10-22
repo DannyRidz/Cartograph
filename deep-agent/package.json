@@ -1,19 +1,28 @@
 {
-  "name": "deep-agent-quickstart",
+  "name": "cartograph-agent",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.34.6",
   "scripts": {
-    "start": "node --experimental-strip-types --env-file-if-exists=.env agent.mts",
+    "prepare:shared": "node scripts/prepare-shared.mjs",
+    "prestart": "pnpm prepare:shared",
+    "start": "mda dev --hostname 127.0.0.1 --no-browser",
+    "pretypecheck": "pnpm prepare:shared",
     "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "prebuild": "pnpm prepare:shared",
+    "build": "tsc --noEmit && mda build",
+    "lint": "cd .. && node_modules/.bin/eslint deep-agent",
+    "preverify:tools": "pnpm prepare:shared",
+    "verify:tools": "node --experimental-strip-types scripts/verify-tools.mts"
   },
   "dependencies": {
-    "@langchain/core": "1.2.14",
+    "@langchain/core": "1.2.20",
     "@langchain/openai": "1.6.2",
     "deepagents": "1.15.1",
-    "langchain": "1.5.10",
-    "langsmith": "~0.9.0"
+    "langchain": "1.5.12",
+    "langsmith": "~0.9.0",
+    "managed-deepagents": "0.9.5-dev.14",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
