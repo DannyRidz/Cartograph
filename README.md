@@ -4,6 +4,18 @@ Turn a public GitHub repository into an interactive dependency map. Explore what
 
 **Every node and edge comes from parsing real code.** AI explains and labels what the parser found; it never invents connections. Unresolved imports and skipped files are reported with reasons.
 
+## Project showcase
+
+Explore the [screenshot walkthrough](docs/showcase/README.md) for a quick look at the working app, its architecture, and recorded agent behaviour. These examples use real parsed repositories. Viewing the showcase makes no AI requests and requires no account.
+
+![Cartograph dependency map of Redux Toolkit, with folder groups, real import connections, and repository details](docs/showcase/images/dependency-map.jpg)
+
+*Saved Redux Toolkit analysis: 226 parsed files, 23 folded folders, and visible coverage gaps.*
+
+![Cartograph Ask pane displaying completed repository lookups and a file-linked answer](docs/reviews/phase-12-ask.jpg)
+
+*Recorded Ask session on a separate public NestJS repository. The live application stays local; this is a screenshot, not an interactive chat.*
+
 ## What it does
 
 - **Interactive maps:** fold folders, expand files, inspect incoming and outgoing imports, and follow clickable file references.
