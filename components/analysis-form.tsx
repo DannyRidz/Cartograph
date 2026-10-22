@@ -1,20 +1,35 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { publicRepository } from "@/lib/pipeline/repository";
 
-export function AnalysisForm() {
+const pendingRepositoryKey = "cartograph:pending-repository";
+
+export function AnalysisForm({ landing = false }: { landing?: boolean }) {
   const router = useRouter();
+  const input = useRef<HTMLInputElement>(null);
+  const starting = useRef(false);
   const [pending, setPending] = useState(false);
+  const [navigating, startNavigation] = useTransition();
   const [error, setError] = useState("");
+  const busy = pending || navigating;
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (pending) return;
-    const repositoryUrl = new FormData(event.currentTarget).get("repositoryUrl");
+  const start = useCallback(async (value: string) => {
+    if (starting.current || navigating) return;
+    starting.current = true;
     setPending(true);
     setError("");
     try {
+      const repositoryUrl = publicRepository(value).url;
+      if (landing) {
+        // Clerk returns to the workspace after both sign in and team selection.
+        // Keep this intent in the same tab until that workspace can mount.
+        try { sessionStorage.setItem(pendingRepositoryKey, repositoryUrl); }
+        catch { throw new Error("Your browser could not carry the repository through sign in. Allow session storage and try again."); }
+        startNavigation(() => router.push("/workspace"));
+        return;
+      }
       const response = await fetch("/api/analyses", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ repositoryUrl }),
@@ -26,22 +41,50 @@ export function AnalysisForm() {
       }
       if (!result || typeof result !== "object" || !("id" in result) || typeof result.id !== "string"
         || !/^[a-f0-9-]{36}$/i.test(result.id)) throw new Error("The server did not return an analysis ID.");
-      router.push(`/workspace/analyses/${result.id}`);
+      startNavigation(() => router.push(`/workspace/analyses/${result.id}`));
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "The request failed. Try again.");
     } finally {
-      // Client navigation can preserve this form when returning to the dashboard.
+      // The route transition keeps submissions blocked after the request finishes.
+      starting.current = false;
       setPending(false);
     }
+  }, [landing, navigating, router]);
+
+  useEffect(() => {
+    if (landing) return;
+    async function resume() {
+      let repository: string | null;
+      try {
+        repository = sessionStorage.getItem(pendingRepositoryKey);
+        // Consume before posting, including when React replays this effect.
+        sessionStorage.removeItem(pendingRepositoryKey);
+      } catch {
+        setError("Your browser could not restore the repository. Paste its URL to continue.");
+        return;
+      }
+      if (!repository) return;
+      if (input.current) input.current.value = repository;
+      await start(repository);
+    }
+    void resume();
+  }, [landing, start]);
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void start(input.current?.value ?? "");
   }
 
-  return <form className="analysis-form" onSubmit={submit} aria-busy={pending}>
+  return <form className={`analysis-form${landing ? " landing-form" : ""}`} onSubmit={submit} aria-busy={busy}>
     <label htmlFor="repository-url">Public GitHub repository</label>
     <div className="analysis-form-fields">
-      <input id="repository-url" name="repositoryUrl" type="url" placeholder="https://github.com/owner/repository"
-        required maxLength={512} autoComplete="off" aria-describedby={error ? "analysis-form-error" : undefined} disabled={pending} />
-      <button type="submit" disabled={pending}>{pending ? "Starting…" : "Analyse repository"}</button>
+      <input ref={input} id="repository-url" name="repositoryUrl" type="url" placeholder="https://github.com/owner/repository"
+        required maxLength={512} autoComplete="off" spellCheck={false} aria-invalid={error ? true : undefined}
+        aria-describedby={error ? "analysis-form-error" : landing ? "landing-form-note" : undefined}
+        onChange={() => setError("")} disabled={busy} />
+      <button type="submit" disabled={busy}>{busy ? "Starting…" : "Analyse repository"}</button>
     </div>
     {error && <p id="analysis-form-error" role="alert">{error}</p>}
+    {landing && <p id="landing-form-note">Public TypeScript and JavaScript repositories. Sign in to start the analysis.</p>}
   </form>;
 }
