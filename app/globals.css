@@ -327,3 +327,62 @@ select, input { border: 1px solid var(--border); border-radius: 3px; background:
 .ask-composer textarea { width: 100%; min-height: 70px; max-height: 180px; resize: vertical; padding: 7px; border: 1px solid var(--border); background: var(--surface); color: var(--foreground); font: inherit; line-height: 1.5; }
 .ask-composer > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
 .ask-pane button:disabled { opacity: .5; cursor: default; }
+
+/* Landing composition shares the workspace palette, typography, and form. */
+.landing-container { width: 100%; max-width: 1188px; margin-inline: auto; padding-inline: 24px; }
+.landing-header { position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--border); background: var(--surface); }
+.landing-header-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 64px; }
+.landing-header nav { display: flex; align-items: center; gap: 24px; }
+.landing-header .theme-control select { min-height: 32px; }
+.landing-header .analysis-link, .landing-footer .analysis-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 12px; }
+.landing-page h1, .landing-page h2 { margin: 0; font-weight: 600; line-height: 1.1; letter-spacing: -.045em; text-wrap: balance; }
+.landing-page h1 { font-size: clamp(36px, 4.6vw, 60px); }
+.landing-page h2 { font-size: clamp(28px, 3.3vw, 42px); }
+.landing-page p { max-width: 46ch; margin: 24px 0 0; color: var(--muted); font-size: 14px; line-height: 1.8; }
+.landing-hero { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: center; gap: 64px; min-height: min(780px, calc(100svh - 64px)); padding-block: 100px; }
+.landing-hero-copy { min-width: 0; }
+.landing-form.analysis-form { margin-top: 36px; padding: 0; border: 0; background: transparent; }
+.landing-form .analysis-form-fields { gap: 8px; }
+.landing-form input { min-width: 0; width: 100%; flex-basis: 100%; min-height: 44px; border-color: var(--muted); }
+.landing-form button { min-height: 40px; }
+.landing-form p { margin-top: 12px; max-width: 46ch; font-size: 11px; line-height: 1.6; }
+.landing-form input::placeholder { color: var(--muted); opacity: 1; }
+.landing-diagram { display: block; width: 100%; height: auto; min-width: 0; }
+.landing-section { padding-block: 128px; border-top: 1px solid var(--border); }
+.landing-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 80px; }
+.landing-page .landing-wide-copy { max-width: 64ch; }
+.landing-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px; list-style: decimal-leading-zero; margin: 64px 0 0; padding-left: 24px; }
+.landing-steps li { padding-left: 8px; }
+.landing-steps li::marker { color: var(--muted); font-family: var(--font-geist-mono), monospace; font-size: 11px; }
+.landing-steps h3 { margin: 0; font-size: 13px; font-weight: 600; }
+.landing-steps p { margin-top: 12px; font-size: 13px; }
+.landing-frameworks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; margin: 48px 0 0; }
+.landing-frameworks > div { padding-block: 20px; border-top: 1px solid var(--border); }
+.landing-page dt { font-size: 13px; font-weight: 600; }
+.landing-page dd { max-width: 46ch; margin: 12px 0 0; color: var(--muted); font-size: 13px; line-height: 1.8; }
+.landing-boundaries { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 80px; margin: 48px 0 0; }
+.landing-boundaries > div { border-left: 1px solid var(--border); padding-left: 20px; }
+.landing-footer { display: flex; align-items: center; flex-wrap: wrap; gap: 24px; padding-block: 24px; border-top: 1px solid var(--border); }
+.landing-footer p { margin: 0; max-width: 64ch; font-size: 11px; }
+.landing-footer > .analysis-link { margin-left: auto; }
+@media (max-width: 960px) {
+  .landing-hero { gap: 32px; padding-block: 80px; }
+  .landing-split { gap: 48px; }
+  .landing-steps { gap: 32px; }
+  .landing-frameworks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .landing-header-inner { flex-wrap: wrap; gap: 8px 16px; padding-block: 8px; }
+  .landing-header nav { gap: 16px; }
+  .landing-header .theme-control { gap: 4px; }
+  .landing-header .theme-control select { min-height: 44px; }
+  .landing-hero, .landing-split { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+  .landing-hero { min-height: auto; padding-block: 72px; }
+  .landing-hero > .landing-diagram { max-width: 440px; margin-inline: auto; }
+  .landing-section { padding-block: 96px; }
+  .landing-steps { grid-template-columns: minmax(0, 1fr); gap: 32px; margin-top: 40px; }
+  .landing-boundaries { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .landing-form button { min-height: 44px; }
+  .landing-footer { gap: 12px 24px; }
+  .landing-footer p { flex-basis: 100%; order: 1; }
+}
