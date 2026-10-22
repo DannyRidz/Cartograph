@@ -16,7 +16,10 @@ assert.deepEqual(verifyCredential(token, secret, now), claims);
 assert.notEqual(signCredential(id, 'org_AgentCheck', secret, now).token, token);
 assert.equal(credentialHash(token).length, 64);
 assert.throws(() => verifyCredential(token, secret, now + 300_000), /expired/);
-assert.throws(() => verifyCredential(token, secret, now - 1000), /expired/);
+assert.throws(() => verifyCredential(token, secret, claims.issuedAt * 1000 - 61_000), /expired/);
+assert.deepEqual(verifyCredential(token, secret, claims.issuedAt * 1000 - 60_000), claims);
+assert.deepEqual(verifyCredential(token, secret, claims.expiresAt * 1000 - 1), claims);
+assert.throws(() => verifyCredential(token, secret, claims.expiresAt * 1000), /expired/);
 assert.throws(() => verifyCredential(token, randomBytes(32).toString('hex'), now), /Invalid/);
 const [payload, signature] = token.split('.');
 const changed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
@@ -43,7 +46,7 @@ try {
   for (const skew of [-60_000, 60_000]) {
     Date.now = () => now + skew;
     const result = await registerAgentCredential(database, id, 'org_AgentCheck', secret);
-    assert.equal(verifyCredential(result.credential, secret, now).issuedAt, Math.floor(now / 1000));
+    assert.equal(verifyCredential(result.credential, secret).issuedAt, Math.floor(now / 1000));
   }
   const before = registrations;
   clockResponse = Response.json('not-a-time');

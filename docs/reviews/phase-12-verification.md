@@ -86,3 +86,9 @@ tool checks and all four saved evaluation cases pass. The first builds hit
 sandbox restrictions; the app also retained a failed generated Turbopack cache.
 Moving that cache aside and building with process and port access passed, with
 the same existing parser tracing warning. No additional model call was needed.
+
+The follow up clock review is also covered: verification allows issuance up to
+60 seconds ahead of the app clock, rejects a greater offset, and still rejects
+at the exact signed expiry. The registration regression now verifies using the
+default app clock with offsets in both directions, rather than substituting the
+database clock. No database lifetime or policy was changed.

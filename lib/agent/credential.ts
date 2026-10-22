@@ -1,6 +1,9 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
 export const CREDENTIAL_SECONDS = 300;
+// Issuance uses database time. Tolerate a slightly slower app clock without
+// extending signed expiry or the database's five minute grant lifetime.
+const CREDENTIAL_CLOCK_SKEW_SECONDS = 60;
 export interface AgentCredential {
   version: 1;
   audience: 'cartograph-tools';
@@ -43,7 +46,8 @@ export function verifyCredential(token: string, secret: string, now = Date.now()
     || !('issuedAt' in claims) || typeof claims.issuedAt !== 'number' || !Number.isSafeInteger(claims.issuedAt)
     || !('expiresAt' in claims) || typeof claims.expiresAt !== 'number' || !Number.isSafeInteger(claims.expiresAt)
     || claims.expiresAt - claims.issuedAt !== CREDENTIAL_SECONDS
-    || claims.issuedAt > Math.floor(now / 1000) || claims.expiresAt <= Math.floor(now / 1000)) {
+    || claims.issuedAt > Math.floor(now / 1000) + CREDENTIAL_CLOCK_SKEW_SECONDS
+    || claims.expiresAt <= Math.floor(now / 1000)) {
     throw new Error('Invalid or expired agent credential.');
   }
   return { version: 1, audience: 'cartograph-tools', analysisId: claims.analysisId,
